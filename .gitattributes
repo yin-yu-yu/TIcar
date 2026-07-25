@@ -1,0 +1,25 @@
+# Auto-detect text files, store with LF in repo, convert to native on checkout
+* text=auto
+
+# Explicit text files
+*.c text
+*.h text
+*.js text
+*.json text
+*.md text
+*.xml text
+*.cmd text
+*.lds text
+*.txt text
+
+# Binary files (no EOL conversion)
+*.out binary
+*.hex binary
+*.map binary
+*.o binary
+*.lib binary
+*.a binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdf binary
