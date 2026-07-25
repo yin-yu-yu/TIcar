@@ -1,14 +1,17 @@
 /**
  * @file    motion_control.c
- * @brief   Motion controller — STUB for team member
+ * @brief   Motion controller — chassis command → PID velocity loop → motor PWM
  *
  * OWNER:  Team Member
- * STATUS: STUB — fill in with real PID and encoder feedback
+ * STATUS: COMPLETE — PID velocity control with encoder feedback
  *
- * TODO for team member:
- *   1. Create PID_t instances for left & right wheels
- *   2. In MotionControl_SetTarget(): convert ChassisCmd → WheelSpeed via Kinematics_Inverse()
- *   3. In MotionControl_Update(): read encoders, compute PID, call Motor_SetPWM()
+ * Data flow (200Hz, from TIMER_0 ISR):
+ *   1. SM_Run() → MotionControl_SetTarget(cmd)  — set desired chassis motion
+ *   2. MotionControl_Update()                   — read encoders, PID, output PWM
+ *
+ * Each call to SetTarget stores the target; Update executes the PID loop.
+ * This decoupling allows the state machine to set targets inside its handler,
+ * while Update runs uniformly after SM_Run() in the ISR.
  */
 
 #include "motion_control.h"
@@ -17,16 +20,30 @@
 #include "pid.h"
 #include "motor.h"
 #include "encoder.h"
+#include "kinematics.h"
+#include "filter.h"       /* for dead-zone */
+#include <math.h>
+#include <stddef.h>
 
 /* ========================================================================
- * Module Variables (STUB — team member to complete)
+ * Module Variables
  * ======================================================================== */
 static PID_t g_pid_left;
 static PID_t g_pid_right;
-static float  g_target_left;   /* Target speed (m/s) left  */
-static float  g_target_right;  /* Target speed (m/s) right */
 
-extern int Get_Encoder_countA, Get_Encoder_countB;
+static float  g_target_left;   /* Target wheel speed (m/s), left  */
+static float  g_target_right;  /* Target wheel speed (m/s), right */
+static bool   g_target_valid;  /* True when a valid target is set  */
+
+/** Encoder ticks → meters: same conversion factor as odometry */
+static float  g_ticks_to_m;
+
+/* ---- Encoder count accumulators (from encoder ISR) ---- */
+extern int32_t Get_Encoder_countA;
+extern int32_t Get_Encoder_countB;
+
+/* ---- Stop flag (defined in control.c, used across project) ---- */
+extern uint8_t Flag_Stop;
 
 /* ========================================================================
  * Public Functions
@@ -34,49 +51,79 @@ extern int Get_Encoder_countA, Get_Encoder_countB;
 
 void MotionControl_Init(void)
 {
-    /* TODO: Initialize PID controllers with values from pid_config.h
-     * PID_Init(&g_pid_left,  VELOCITY_KP_DEFAULT, VELOCITY_KI_DEFAULT, VELOCITY_KD_DEFAULT,
-     *          VELOCITY_OUT_MIN, VELOCITY_OUT_MAX);
-     * PID_Init(&g_pid_right, ... ); */
+    /* Init PID controllers with defaults from pid_config.h */
+    PID_Init(&g_pid_left,
+             VELOCITY_KP_DEFAULT, VELOCITY_KI_DEFAULT, VELOCITY_KD_DEFAULT,
+             VELOCITY_OUT_MIN, VELOCITY_OUT_MAX);
+    PID_Init(&g_pid_right,
+             VELOCITY_KP_DEFAULT, VELOCITY_KI_DEFAULT, VELOCITY_KD_DEFAULT,
+             VELOCITY_OUT_MIN, VELOCITY_OUT_MAX);
+
     g_target_left  = 0.0f;
     g_target_right = 0.0f;
+    g_target_valid = false;
+
+    /* Encoder ticks → meters conversion */
+    g_ticks_to_m = WHEEL_PERIMETER_M
+                 / (ENCODER_PPR * (float)ENCODER_MULTIPLES * MOTOR_GEAR_RATIO);
 }
 
 void MotionControl_SetTarget(ChassisCmd_t cmd)
 {
-    /* TODO: Convert chassis command to wheel targets
-     * WheelSpeed_t wheels = Kinematics_Inverse(cmd);
-     * PID_SetSetpoint(&g_pid_left,  wheels.left);
-     * PID_SetSetpoint(&g_pid_right, wheels.right); */
-
+    /* Convert chassis command → wheel speed targets via inverse kinematics */
     WheelSpeed_t wheels = Kinematics_Inverse(cmd);
+
     g_target_left  = wheels.left;
     g_target_right = wheels.right;
+    g_target_valid = true;
 
-    /* STUB: Direct PWM output (no PID yet)
-     * TODO: Replace with proper PID control in MotionControl_Update() */
-    int16_t pwm_l = (int16_t)(g_target_left  * PWM_MAX / MAX_LINEAR_SPEED_MPS);
-    int16_t pwm_r = (int16_t)(g_target_right * PWM_MAX / MAX_LINEAR_SPEED_MPS);
-    Motor_SetPWM(pwm_l, -pwm_r);  /* Note: right motor sign may need flipping */
+    /* Set PID setpoints */
+    PID_SetSetpoint(&g_pid_left,  wheels.left);
+    PID_SetSetpoint(&g_pid_right, wheels.right);
 }
 
 void MotionControl_Update(void)
 {
-    /* TODO: Real PI velocity control loop
-     *
-     * // Convert encoder counts to speed (m/s)
-     * float speedL = Encoder_GetCountA() * conversion_factor / CONTROL_DT_S;
-     * float speedR = Encoder_GetCountB() * conversion_factor / CONTROL_DT_S;
-     *
-     * // Compute PID
-     * float pwm_l = PID_Compute(&g_pid_left,  speedL, CONTROL_DT_S);
-     * float pwm_r = PID_Compute(&g_pid_right, speedR, CONTROL_DT_S);
-     *
-     * // Output
-     * Motor_SetPWM((int16_t)pwm_l, (int16_t)pwm_r);
-     */
+    /* ---- Safety: stop flag halts motors immediately ---- */
+    if (Flag_Stop || !g_target_valid) {
+        Motor_Stop();
+        return;
+    }
 
-    /* STUB: Nothing yet — Motor_SetPWM called directly in SetTarget */
+    /* ---- Read encoder counts (accumulated since last read) ---- */
+    int32_t encL = Encoder_GetCountA();
+    int32_t encR = Encoder_GetCountB();
+
+    /* Reset for next interval */
+    Encoder_Reset();
+
+    /* ---- Convert encoder counts to speed (m/s) ----
+     * speed = pulses * meters_per_tick / dt
+     *
+     * Sign convention:
+     *   positive encoder count → forward motion
+     *   positive PID output → forward PWM (Motor_SetPWM convention) */
+    float dt = CONTROL_DT_S;  /* 0.005s */
+    float speedL = (float)encL * g_ticks_to_m / dt;
+    float speedR = (float)encR * g_ticks_to_m / dt;
+
+    /* Apply dead-zone to filter encoder noise at very low speeds */
+    speedL = Filter_DeadZone(speedL, 0.001f);
+    speedR = Filter_DeadZone(speedR, 0.001f);
+
+    /* ---- PID velocity control ----
+     * Note: right motor may need sign flip depending on mounting orientation.
+     * When both motors are mounted mirror-symmetric, one rotates opposite
+     * to achieve the same forward direction. The sign correction belongs
+     * in Motor_SetPWM, not here. */
+    float pwm_l = PID_Compute(&g_pid_left,  speedL, dt);
+    float pwm_r = PID_Compute(&g_pid_right, speedR, dt);
+
+    /* ---- Output to motors ----
+     * PWM range: ±VELOCITY_OUT_MAX (±7800)
+     * Right motor sign flipped to match mechanical mounting orientation
+     * (motors are mounted mirror-symmetric on the chassis) */
+    Motor_SetPWM((int16_t)pwm_l, (int16_t)(-pwm_r));
 }
 
 void MotionControl_Stop(void)
@@ -85,5 +132,6 @@ void MotionControl_Stop(void)
     PID_Reset(&g_pid_right);
     g_target_left  = 0.0f;
     g_target_right = 0.0f;
+    g_target_valid = false;
     Motor_Stop();
 }

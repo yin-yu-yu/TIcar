@@ -70,11 +70,11 @@ void SM_Init(void)
     Kinematics_Init();
     Odom_Init();
 
-    /* TODO: Call team member module inits when ready
-     * MPU6050_Init();
-     * BT_Protocol_Init();
-     * MotionControl_Init();
-     * LineFollow_Init(); */
+    /* ---- Initialize sub-modules (team members) ---- */
+    MotionControl_Init();
+    LineFollow_Init();
+    BT_Protocol_Init();
+    /* MPU6050_Init();  // Uncomment when IMU driver is ported */
 }
 
 void SM_Run(void)
@@ -262,9 +262,14 @@ static void Handle_LineFollow(void)
         return;
     }
 
-    /* LineFollow_ComputeCorrection() is filled by team member
-     * It internally calls MotionControl_SetTarget() */
-    IR_LineDetect_Update();
+    /* Read IR sensors and compute motion command via Application layer.
+     * LineFollow_ComputeCorrection() internally:
+     *   1. Calls IR_LineDetect_Update() — sensor classification
+     *   2. Gets ChassisCmd_t via IR_GetLineFollowCmd()
+     *   3. Applies position-error PID correction
+     *   4. Calls MotionControl_SetTarget() — feed velocity PID loop */
+    uint8_t sensor_state = IR_GetSensorState();
+    LineFollow_ComputeCorrection(sensor_state);
 }
 
 /**

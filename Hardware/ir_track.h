@@ -12,6 +12,7 @@
 #define _IR_TRACK_H_
 
 #include <stdint.h>
+#include "kinematics.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,11 +62,29 @@ void IR_SetBaseSpeed(float speed_mmps);
  */
 float IR_GetTurnDiff(void);
 
+/**
+ * @brief  Get the chassis command computed by the last IR_LineDetect_Update()
+ * @return ChassisCmd_t (vx, wz) ready for MotionControl_SetTarget()
+ *
+ * This bridges the Hardware→Application gap cleanly:
+ * IR_LineDetect_Update() computes the command internally,
+ * and the Application layer retrieves it via this accessor.
+ */
+ChassisCmd_t IR_GetLineFollowCmd(void);
+
 /* ---- Extern global state (debug/display use) ---- */
 extern uint32_t ir_dh1_state;
 extern uint32_t ir_dh2_state;
 extern uint32_t ir_dh3_state;
 extern uint32_t ir_dh4_state;
+
+/* ---- Extern line-follow parameters (BT APP tunable) ---- */
+extern float Turn90Angle;
+extern float TurnMaxAngle;
+extern float TurnMidAngle;
+extern float TurnMinAngle;
+extern float BaseSpeed;
+extern float ForwardLimit;
 
 #ifdef __cplusplus
 }
