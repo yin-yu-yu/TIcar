@@ -11,7 +11,7 @@
  *   TIMER_0 ISR (200Hz) handles real-time control (encoder, PID, state machine)
  */
 
-// #define CHASSIS_DEBUG    /* ⚠️ Uncomment for debug; comment for competition */
+#define CHASSIS_DEBUG    /* ⚠️ Uncomment for debug; comment for competition */
 
 #include "board.h"
 #include "show.h"
