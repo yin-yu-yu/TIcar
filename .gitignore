@@ -13,16 +13,7 @@ device.opt
 device.cmd.genlibs
 
 # =============================================================================
-# CCS / TI IDE — project metadata (regenerated on import)
-# =============================================================================
-.ccsproject
-.cproject
-.project
-.settings/
-.targets/
-
-# =============================================================================
-# Cloud TI / Theia IDE
+# Cloud TI / Theia IDE (local workspace only)
 # =============================================================================
 .theia/
 *.theia-workspace
