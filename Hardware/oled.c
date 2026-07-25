@@ -10,18 +10,18 @@ uint8_t OLED_GRAM[128][8];
 Function: Refresh the OLED screen
 Input   : none
 Output  : none
-�������ܣ�ˢ��OLED��Ļ
-��ڲ�������
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷刷锟斤拷OLED锟斤拷幕
+锟斤拷诓锟斤拷锟斤拷锟斤拷锟�
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/
 void OLED_Refresh_Gram(void)
 {
 	uint8_t i,n;		    
 	for(i=0;i<8;i++)  
 	{  
-		OLED_WR_Byte (0xb0+i,OLED_CMD);    //Set page address (0~7) //����ҳ��ַ��0~7��
-		OLED_WR_Byte (0x00,OLED_CMD);      //Set the display location - column low address //������ʾλ�á��е͵�ַ
-		OLED_WR_Byte (0x10,OLED_CMD);      //Set the display location - column height address //������ʾλ�á��иߵ�ַ   
+		OLED_WR_Byte (0xb0+i,OLED_CMD);    //Set page address (0~7) //锟斤拷锟斤拷页锟斤拷址锟斤拷0~7锟斤拷
+		OLED_WR_Byte (0x00,OLED_CMD);      //Set the display location - column low address //锟斤拷锟斤拷锟斤拷示位锟矫★拷锟叫低碉拷址
+		OLED_WR_Byte (0x10,OLED_CMD);      //Set the display location - column height address //锟斤拷锟斤拷锟斤拷示位锟矫★拷锟叫高碉拷址   
 		for(n=0;n<128;n++)OLED_WR_Byte(OLED_GRAM[n][i],OLED_DATA); 
 	}   
 }
@@ -29,9 +29,9 @@ void OLED_Refresh_Gram(void)
 Function: Refresh the OLED screen
 Input   : Dat: data/command to write, CMD: data/command flag 0, represents the command;1, represents data
 Output  : none
-�������ܣ���OLEDд��һ���ֽ�
-��ڲ�����dat:Ҫд�������/���cmd:����/�����־ 0,��ʾ����;1,��ʾ����
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟斤拷OLED写锟斤拷一锟斤拷锟街斤拷
+锟斤拷诓锟斤拷锟斤拷锟絛at:要写锟斤拷锟斤拷锟斤拷锟�/锟斤拷锟筋，cmd:锟斤拷锟斤拷/锟斤拷锟斤拷锟街� 0,锟斤拷示锟斤拷锟斤拷;1,锟斤拷示锟斤拷锟斤拷
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/  
 void OLED_WR_Byte(uint8_t dat,uint8_t cmd)
 {	
@@ -56,13 +56,13 @@ void OLED_WR_Byte(uint8_t dat,uint8_t cmd)
 Function: Turn on the OLED display
 Input   : none
 Output  : none
-�������ܣ�����OLED��ʾ 
-��ڲ�������
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟斤拷锟斤拷OLED锟斤拷示 
+锟斤拷诓锟斤拷锟斤拷锟斤拷锟�
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/  
 void OLED_Display_On(void)
 {
-	OLED_WR_Byte(0X8D,OLED_CMD);  //SET DCDC command //SET DCDC����
+	OLED_WR_Byte(0X8D,OLED_CMD);  //SET DCDC command //SET DCDC锟斤拷锟斤拷
 	OLED_WR_Byte(0X14,OLED_CMD);  //DCDC ON
 	OLED_WR_Byte(0XAF,OLED_CMD);  //DISPLAY ON
 }
@@ -70,13 +70,13 @@ void OLED_Display_On(void)
 Function: Turn off the OLED display
 Input   : none
 Output  : none
-�������ܣ��ر�OLED��ʾ 
-��ڲ�������			  
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟截憋拷OLED锟斤拷示 
+锟斤拷诓锟斤拷锟斤拷锟斤拷锟�			  
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/  
 void OLED_Display_Off(void)
 {
-	OLED_WR_Byte(0X8D,OLED_CMD);  //SET DCDC command //SET DCDC����
+	OLED_WR_Byte(0X8D,OLED_CMD);  //SET DCDC command //SET DCDC锟斤拷锟斤拷
 	OLED_WR_Byte(0X10,OLED_CMD);  //DCDC OFF
 	OLED_WR_Byte(0XAE,OLED_CMD);  //DISPLAY OFF
 }	
@@ -84,28 +84,28 @@ void OLED_Display_Off(void)
 Function: Screen clear function, clear the screen, the entire screen is black, and did not light up the same
 Input   : none
 Output  : none
-�������ܣ���������,������,������Ļ�Ǻ�ɫ�ģ���û����һ��
-��ڲ�������		  
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟斤拷锟斤拷锟斤拷锟斤拷,锟斤拷锟斤拷锟斤拷,锟斤拷锟斤拷锟斤拷幕锟角猴拷色锟侥ｏ拷锟斤拷没锟斤拷锟斤拷一锟斤拷
+锟斤拷诓锟斤拷锟斤拷锟斤拷锟�		  
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/  
 void OLED_Clear(void)  
 {  
 	uint8_t i,n;  
 	for(i=0;i<8;i++)for(n=0;n<128;n++)OLED_GRAM[n][i]=0X00;  
-	OLED_Refresh_Gram(); //Update the display //������ʾ
+	OLED_Refresh_Gram(); //Update the display //锟斤拷锟斤拷锟斤拷示
 }
 /**************************************************************************
 Function: Draw point
 Input   : x,y: starting coordinate;T :1, fill,0, empty
 Output  : none
-�������ܣ����� 
-��ڲ�����x,y :�������; t:1,���,0,���			  
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟斤拷锟斤拷 
+锟斤拷诓锟斤拷锟斤拷锟絰,y :锟斤拷锟斤拷锟斤拷锟�; t:1,锟斤拷锟�,0,锟斤拷锟�			  
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/ 
 void OLED_DrawPoint(uint8_t x,uint8_t y,uint8_t t)
 {
 	uint8_t pos,bx,temp=0;
-	if(x>127||y>63)return;//������Χ��.
+	if(x>127||y>63)return;//锟斤拷锟斤拷锟斤拷围锟斤拷.
 	pos=7-y/8;
 	bx=y%8;
 	temp=1<<(7-bx);
@@ -116,19 +116,19 @@ void OLED_DrawPoint(uint8_t x,uint8_t y,uint8_t t)
 Function: Displays a character, including partial characters, at the specified position
 Input   : x,y: starting coordinate;Len: The number of digits;Size: font size;Mode :0, anti-white display,1, normal display
 Output  : none
-�������ܣ���ָ��λ����ʾһ���ַ�,���������ַ�
-��ڲ�����x,y :�������; len :���ֵ�λ��; size:�����С; mode:0,������ʾ,1,������ʾ	   
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟斤拷指锟斤拷位锟斤拷锟斤拷示一锟斤拷锟街凤拷,锟斤拷锟斤拷锟斤拷锟斤拷锟街凤拷
+锟斤拷诓锟斤拷锟斤拷锟絰,y :锟斤拷锟斤拷锟斤拷锟�; len :锟斤拷锟街碉拷位锟斤拷; size:锟斤拷锟斤拷锟叫�; mode:0,锟斤拷锟斤拷锟斤拷示,1,锟斤拷锟斤拷锟斤拷示	   
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/
 void OLED_ShowChar(uint8_t x,uint8_t y,uint8_t chr,uint8_t size,uint8_t mode)
 {      			    
 	uint8_t temp,t,t1;
 	uint8_t y0=y;
-	chr=chr-' '; //Get the offset value //�õ�ƫ�ƺ��ֵ				   
+	chr=chr-' '; //Get the offset value //锟矫碉拷偏锟狡猴拷锟街�				   
     for(t=0;t<size;t++)
     {   
-		if(size==12)temp=oled_asc2_1206[chr][t];  //Invoke 1206 font   //����1206����
-		else temp=oled_asc2_1608[chr][t];		      //Invoke the 1608 font //����1608���� 	                          
+		if(size==12)temp=oled_asc2_1206[chr][t];  //Invoke 1206 font   //锟斤拷锟斤拷1206锟斤拷锟斤拷
+		else temp=oled_asc2_1608[chr][t];		      //Invoke the 1608 font //锟斤拷锟斤拷1608锟斤拷锟斤拷 	                          
         for(t1=0;t1<8;t1++)
 		{
 			if(temp&0x80)OLED_DrawPoint(x,y,mode);
@@ -148,9 +148,9 @@ void OLED_ShowChar(uint8_t x,uint8_t y,uint8_t chr,uint8_t size,uint8_t mode)
 Function: Find m to the NTH power
 Input   : m: base number, n: power number
 Output  : none
-�������ܣ���m��n�η��ĺ���
-��ڲ�����m��������n���η���
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟斤拷m锟斤拷n锟轿凤拷锟侥猴拷锟斤拷
+锟斤拷诓锟斤拷锟斤拷锟絤锟斤拷锟斤拷锟斤拷锟斤拷n锟斤拷锟轿凤拷锟斤拷
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/
 uint32_t oled_pow(uint8_t m,uint8_t n)
 {
@@ -163,9 +163,9 @@ uint32_t oled_pow(uint8_t m,uint8_t n)
 Function: Displays 2 numbers
 Input   : x,y: starting coordinate;Len: The number of digits;Size: font size;Mode: mode, 0, fill mode, 1, overlay mode;Num: value (0 ~ 4294967295);
 Output  : none
-�������ܣ���ʾ2������
-��ڲ�����x,y :�������; len :���ֵ�λ��; size:�����С; mode:ģʽ, 0,���ģʽ, 1,����ģʽ; num:��ֵ(0~4294967295);	 
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟斤拷示2锟斤拷锟斤拷锟斤拷
+锟斤拷诓锟斤拷锟斤拷锟絰,y :锟斤拷锟斤拷锟斤拷锟�; len :锟斤拷锟街碉拷位锟斤拷; size:锟斤拷锟斤拷锟叫�; mode:模式, 0,锟斤拷锟侥Ｊ�, 1,锟斤拷锟斤拷模式; num:锟斤拷值(0~4294967295);	 
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/
 void OLED_ShowNumber(uint8_t x,uint8_t y,uint32_t num,uint8_t len,uint8_t size)
 {         	
@@ -190,9 +190,9 @@ void OLED_ShowNumber(uint8_t x,uint8_t y,uint32_t num,uint8_t len,uint8_t size)
 Function: Display string
 Input   : x,y: starting coordinate;*p: starting address of the string
 Output  : none
-�������ܣ���ʾ�ַ���
-��ڲ�����x,y :�������; *p:�ַ�����ʼ��ַ 
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟斤拷示锟街凤拷锟斤拷
+锟斤拷诓锟斤拷锟斤拷锟絰,y :锟斤拷锟斤拷锟斤拷锟�; *p:锟街凤拷锟斤拷锟斤拷始锟斤拷址 
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/
 void OLED_ShowString(uint8_t x,uint8_t y,const char *p)
 {
@@ -211,9 +211,9 @@ void OLED_ShowString(uint8_t x,uint8_t y,const char *p)
 Function: Initialize the OLED
 Input   : none
 Output  : none
-�������ܣ���ʼ��OLED	
-��ڲ���: �� 
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟斤拷始锟斤拷OLED	
+锟斤拷诓锟斤拷锟�: 锟斤拷 
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/	    
 void OLED_Init(void)
 { 	
@@ -224,35 +224,35 @@ void OLED_Init(void)
 
 	OLED_RST_Set(); 
 				  
-	OLED_WR_Byte(0xAE,OLED_CMD); //Close display //�ر���ʾ
-	OLED_WR_Byte(0xD5,OLED_CMD); //The frequency frequency factor, the frequency of the shock //����ʱ�ӷ�Ƶ����,��Ƶ��
-	OLED_WR_Byte(80,OLED_CMD);   //[3:0], the frequency dividing factor;[7:4], oscillation frequency //[3:0],��Ƶ����;[7:4],��Ƶ��
-	OLED_WR_Byte(0xA8,OLED_CMD); //Set the number of driver paths //��������·��
-	OLED_WR_Byte(0X3F,OLED_CMD); //Default 0x3f(1/64) //Ĭ��0X3F(1/64) 
-	OLED_WR_Byte(0xD3,OLED_CMD); //Setting display deviation //������ʾƫ��
-	OLED_WR_Byte(0X00,OLED_CMD); //Default is 0//Ĭ��Ϊ0
+	OLED_WR_Byte(0xAE,OLED_CMD); //Close display //锟截憋拷锟斤拷示
+	OLED_WR_Byte(0xD5,OLED_CMD); //The frequency frequency factor, the frequency of the shock //锟斤拷锟斤拷时锟接凤拷频锟斤拷锟斤拷,锟斤拷频锟斤拷
+	OLED_WR_Byte(80,OLED_CMD);   //[3:0], the frequency dividing factor;[7:4], oscillation frequency //[3:0],锟斤拷频锟斤拷锟斤拷;[7:4],锟斤拷频锟斤拷
+	OLED_WR_Byte(0xA8,OLED_CMD); //Set the number of driver paths //锟斤拷锟斤拷锟斤拷锟斤拷路锟斤拷
+	OLED_WR_Byte(0X3F,OLED_CMD); //Default 0x3f(1/64) //默锟斤拷0X3F(1/64) 
+	OLED_WR_Byte(0xD3,OLED_CMD); //Setting display deviation //锟斤拷锟斤拷锟斤拷示偏锟斤拷
+	OLED_WR_Byte(0X00,OLED_CMD); //Default is 0//默锟斤拷为0
 
-	OLED_WR_Byte(0x40,OLED_CMD); //Sets the number of rows to display starting line [5:0] //������ʾ��ʼ�� [5:0],����
+	OLED_WR_Byte(0x40,OLED_CMD); //Sets the number of rows to display starting line [5:0] //锟斤拷锟斤拷锟斤拷示锟斤拷始锟斤拷 [5:0],锟斤拷锟斤拷
 													
-	OLED_WR_Byte(0x8D,OLED_CMD); //Charge pump setup //��ɱ�����
-	OLED_WR_Byte(0x14,OLED_CMD); //Bit2, on/off //bit2������/�ر�
-	OLED_WR_Byte(0x20,OLED_CMD); //Set up the memory address mode //�����ڴ��ַģʽ
-	OLED_WR_Byte(0x02,OLED_CMD); //[1:0],00, column address mode;01, line address mode;10. Page address mode;The default 10; //[1:0],00���е�ַģʽ;01���е�ַģʽ;10,ҳ��ַģʽ;Ĭ��10;
-	OLED_WR_Byte(0xA1,OLED_CMD); //Segment redefine setting,bit0:0,0- >;0;1, 0 - & gt;127; //���ض�������,bit0:0,0->0;1,0->127;
-	OLED_WR_Byte(0xC0,OLED_CMD); //Set the COM scan direction;Bit3:0, normal mode;1, Re-define schema COM[n-1]- >;COM0;N: Number of driving paths//����COMɨ�跽��;bit3:0,��ͨģʽ;1,�ض���ģʽ COM[N-1]->COM0;N:����·��
-	OLED_WR_Byte(0xDA,OLED_CMD); //Set the COM hardware pin configuration //����COMӲ����������
-	OLED_WR_Byte(0x12,OLED_CMD); //[5:4]configuration //[5:4]����
+	OLED_WR_Byte(0x8D,OLED_CMD); //Charge pump setup //锟斤拷杀锟斤拷锟斤拷锟�
+	OLED_WR_Byte(0x14,OLED_CMD); //Bit2, on/off //bit2锟斤拷锟斤拷锟斤拷/锟截憋拷
+	OLED_WR_Byte(0x20,OLED_CMD); //Set up the memory address mode //锟斤拷锟斤拷锟节达拷锟街纺Ｊ�
+	OLED_WR_Byte(0x02,OLED_CMD); //[1:0],00, column address mode;01, line address mode;10. Page address mode;The default 10; //[1:0],00锟斤拷锟叫碉拷址模式;01锟斤拷锟叫碉拷址模式;10,页锟斤拷址模式;默锟斤拷10;
+	OLED_WR_Byte(0xA1,OLED_CMD); //Segment redefine setting,bit0:0,0- >;0;1, 0 - & gt;127; //锟斤拷锟截讹拷锟斤拷锟斤拷锟斤拷,bit0:0,0->0;1,0->127;
+	OLED_WR_Byte(0xC0,OLED_CMD); //Set the COM scan direction;Bit3:0, normal mode;1, Re-define schema COM[n-1]- >;COM0;N: Number of driving paths//锟斤拷锟斤拷COM扫锟借方锟斤拷;bit3:0,锟斤拷通模式;1,锟截讹拷锟斤拷模式 COM[N-1]->COM0;N:锟斤拷锟斤拷路锟斤拷
+	OLED_WR_Byte(0xDA,OLED_CMD); //Set the COM hardware pin configuration //锟斤拷锟斤拷COM硬锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
+	OLED_WR_Byte(0x12,OLED_CMD); //[5:4]configuration //[5:4]锟斤拷锟斤拷
 	 
-	OLED_WR_Byte(0x81,OLED_CMD); //Contrast Settings //�Աȶ�����
-	OLED_WR_Byte(0xEF,OLED_CMD); //1~ 255; Default 0x7f (brightness Settings, the bigger the brighter) //1~255;Ĭ��0X7F (��������,Խ��Խ��)
-	OLED_WR_Byte(0xD9,OLED_CMD); //Set the pre-charging cycle //����Ԥ�������
+	OLED_WR_Byte(0x81,OLED_CMD); //Contrast Settings //锟皆比讹拷锟斤拷锟斤拷
+	OLED_WR_Byte(0xEF,OLED_CMD); //1~ 255; Default 0x7f (brightness Settings, the bigger the brighter) //1~255;默锟斤拷0X7F (锟斤拷锟斤拷锟斤拷锟斤拷,越锟斤拷越锟斤拷)
+	OLED_WR_Byte(0xD9,OLED_CMD); //Set the pre-charging cycle //锟斤拷锟斤拷预锟斤拷锟斤拷锟斤拷锟�
 	OLED_WR_Byte(0xf1,OLED_CMD); //[3:0],PHASE 1;[7:4],PHASE 2;
-	OLED_WR_Byte(0xDB,OLED_CMD); //Setting vcomh voltage multiplier//����VCOMH ��ѹ����
+	OLED_WR_Byte(0xDB,OLED_CMD); //Setting vcomh voltage multiplier//锟斤拷锟斤拷VCOMH 锟斤拷压锟斤拷锟斤拷
 	OLED_WR_Byte(0x30,OLED_CMD); //[6:4] 000,0.65*vcc;001,0.77*vcc;011,0.83*vcc;
 
-	OLED_WR_Byte(0xA4,OLED_CMD); //Global display; Bit0:1, open; 0, close; (white screen/black screen)//ȫ����ʾ����;bit0:1,����;0,�ر�;(����/����)
-	OLED_WR_Byte(0xA6,OLED_CMD); //Settings display mode; Bit0:1, anti-phase display; 0, normal display//������ʾ��ʽ;bit0:1,������ʾ;0,������ʾ	    						   
-	OLED_WR_Byte(0xAF,OLED_CMD); //Open display //������ʾ	 
+	OLED_WR_Byte(0xA4,OLED_CMD); //Global display; Bit0:1, open; 0, close; (white screen/black screen)//全锟斤拷锟斤拷示锟斤拷锟斤拷;bit0:1,锟斤拷锟斤拷;0,锟截憋拷;(锟斤拷锟斤拷/锟斤拷锟斤拷)
+	OLED_WR_Byte(0xA6,OLED_CMD); //Settings display mode; Bit0:1, anti-phase display; 0, normal display//锟斤拷锟斤拷锟斤拷示锟斤拷式;bit0:1,锟斤拷锟斤拷锟斤拷示;0,锟斤拷锟斤拷锟斤拷示	    						   
+	OLED_WR_Byte(0xAF,OLED_CMD); //Open display //锟斤拷锟斤拷锟斤拷示	 
 	OLED_Clear();
 }  
 
@@ -264,23 +264,23 @@ Input   : x: indicates the horizontal coordinates displayed; Y: the vertical coo
           font_height: the font is high for the use of the word mold, because my screen pixels are 32hours, 128----0~ 7, and four bits per page
 Output  : none
 Note: this method is used to show that the Chinese character must satisfy the size of the word that the word model generates the software to generate the same size as the dot matrix
-�������ܣ���ʾ����	
-��ڲ���: x����ʾ��ʾ��ˮƽ����; y: ��ʾ��ʾ�Ĵ�ֱ����;
-          no: ��ʾҪ��ʾ�ĺ��֣�ģ�飩��hzk[][]�����е��к�,ͨ���к���ȷ����������Ҫ��ʾ�ĺ���,
-              ��������Ŀ�font_width��ֵ����������ģ��������������ģʱ�ĵ���ֵ��Сһ��;
-          font_height:Ϊ����ģ��������������ģʱ����ĸ�,�����ҵ�������Ϊ32*128-----0~7��8ҳ��ÿҳ4��λ
-����  ֵ����
-ע�⣺�����ַ�������ʾ����һ��Ҫ��������ģ�����������ɵ��ֿ�������С��ͬ���У�������������
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟斤拷示锟斤拷锟斤拷	
+锟斤拷诓锟斤拷锟�: x锟斤拷锟斤拷示锟斤拷示锟斤拷水平锟斤拷锟斤拷; y: 锟斤拷示锟斤拷示锟侥达拷直锟斤拷锟斤拷;
+          no: 锟斤拷示要锟斤拷示锟侥猴拷锟街ｏ拷模锟介）锟斤拷hzk[][]锟斤拷锟斤拷锟叫碉拷锟叫猴拷,通锟斤拷锟叫猴拷锟斤拷确锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷要锟斤拷示锟侥猴拷锟斤拷,
+              锟斤拷锟斤拷锟斤拷锟斤拷目锟絝ont_width锟斤拷值锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷模锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷模时锟侥碉拷锟斤拷值锟斤拷小一锟斤拷;
+          font_height:为锟斤拷锟斤拷模锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷模时锟斤拷锟斤拷母锟�,锟斤拷锟斤拷锟揭碉拷锟斤拷锟斤拷锟斤拷为32*128-----0~7锟斤拷8页锟斤拷每页4锟斤拷位
+锟斤拷锟斤拷  值锟斤拷锟斤拷
+注锟解：锟斤拷锟斤拷锟街凤拷锟斤拷锟斤拷锟斤拷示锟斤拷锟斤拷一锟斤拷要锟斤拷锟斤拷锟斤拷锟斤拷模锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟缴碉拷锟街匡拷锟斤拷锟斤拷锟斤拷小锟斤拷同锟斤拷锟叫ｏ拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
 **************************************************************************/	    
 void OLED_ShowCHinese(uint8_t x,uint8_t y,uint8_t no,uint8_t font_width,uint8_t font_height)
 {     			    
 	 uint8_t t, i;
    for(i=0;i<(font_height/8);i++)	//The maximum height of font_height is 32. this screen is only 8 pages (line), four digits per page
-	                                //font_height���ֵΪ32��������ֻ��8��ҳ���У���ÿҳ4��λ
+	                                //font_height锟斤拷锟街滴�32锟斤拷锟斤拷锟斤拷锟斤拷只锟斤拷8锟斤拷页锟斤拷锟叫ｏ拷锟斤拷每页4锟斤拷位
 	 {
 			OLED_Set_Pos(x,y+i);	
 			for(t=0;t<font_width;t++)		//The maximum value of font_width is 128. the screen is only that large 
-		                              //font_width���ֵΪ128����Ļֻ����ô��
+		                              //font_width锟斤拷锟街滴�128锟斤拷锟斤拷幕只锟斤拷锟斤拷么锟斤拷
 			{	
 					OLED_WR_Byte(Hzk16[(font_height/8)*no+i][t],OLED_DATA);
 			}		
@@ -290,9 +290,9 @@ void OLED_ShowCHinese(uint8_t x,uint8_t y,uint8_t no,uint8_t font_width,uint8_t 
 Function: Set the coordinates (position) displayed on the screen.
 Input   : x, y: starting point coordinates
 Output  : none
-�������ܣ����ú�������Ļ����ʾ�����꣨λ�ã�
-��ڲ���: x,y :�������
-����  ֵ����
+锟斤拷锟斤拷锟斤拷锟杰ｏ拷锟斤拷锟矫猴拷锟斤拷锟斤拷锟斤拷幕锟斤拷锟斤拷示锟斤拷锟斤拷锟疥（位锟矫ｏ拷
+锟斤拷诓锟斤拷锟�: x,y :锟斤拷锟斤拷锟斤拷锟�
+锟斤拷锟斤拷  值锟斤拷锟斤拷
 **************************************************************************/	  
 void OLED_Set_Pos(unsigned char x, unsigned char y)
 { 	

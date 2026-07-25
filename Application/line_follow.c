@@ -1,12 +1,12 @@
 /**
  * @file    line_follow.c
- * @brief   Line-following strategy — STUB for team member
+ * @brief   循线策略 — 待团队成员填充的 STUB
  *
- * OWNER:  Team Member
- * STATUS: STUB — fill in with real line-following algorithm
+ * 负责人：团队成员
+ * 状态：STUB — 请填充真实的循线算法
  *
- * TODO: The existing IR line-follow state machine is in Hardware/IR_Module.c
- *       (function IRDM_line_inspection()). Migrate and enhance it here.
+ * TODO: 现有的红外循线状态机在 Hardware/IR_Module.c 中
+ *       （函数 IRDM_line_inspection()）。请迁移并增强到本模块中。
  */
 
 #include "line_follow.h"
@@ -16,15 +16,15 @@
 #include "robot_config.h"
 
 /* ========================================================================
- * Module Variables
+ * 模块变量
  * ======================================================================== */
-static float g_base_speed = 0.15f;  /* m/s, default 150mm/s */
+static float g_base_speed = 0.15f;  /* m/s，默认 150mm/s */
 
 extern float turn_diff;
 extern int Flag_Stop;
 
 /* ========================================================================
- * Public Functions
+ * 公开函数
  * ======================================================================== */
 
 void LineFollow_Init(void)
@@ -34,25 +34,24 @@ void LineFollow_Init(void)
 
 float LineFollow_ComputeCorrection(uint8_t sensor_state)
 {
-    /* TODO: Implement line-following PID or state machine
+    /* TODO: 实现循线 PID 或状态机
      *
-     * The existing IR state machine in Hardware/IR_Module.c:
-     *   - Reads 4-bit sensor state
-     *   - Classifies: cross, 90-left, 90-right, big-left, big-right,
-     *                 small-left, small-right, straight, lost
-     *   - Sets turn_diff and base_speed_mm
-     *   - Computes left/right target speeds (m/s)
-     *   - Writes to MotorA.Target_Encoder, MotorB.Target_Encoder
+     * Hardware/IR_Module.c 中现有的红外状态机：
+     *   - 读取 4 位传感器状态
+     *   - 分类：十字、90度左转、90度右转、大左、大右、小左、小右、直行、丢失
+     *   - 设置 turn_diff 和 base_speed_mm
+     *   - 计算左右目标速度 (m/s)
+     *   - 写入 MotorA.Target_Encoder, MotorB.Target_Encoder
      *
-     * For the new architecture, this function should:
-     *   1. Classify sensor_state into a line position error
-     *   2. Use a PID to compute turn correction
-     *   3. Return correction value OR directly call MotionControl_SetTarget()
+     * 对于新架构，本函数应：
+     *   1. 将 sensor_state 分类为线位置误差
+     *   2. 使用 PID 计算转弯修正量
+     *   3. 返回修正值 或 直接调用 MotionControl_SetTarget()
      *
-     * For now, delegate to the existing IRDM_line_inspection() logic.
+     * 目前先委托给现有的 IRDM_line_inspection() 逻辑。
      */
 
-    /* STUB: Call existing IR module logic */
+    /* STUB: 调用现有的红外模块逻辑 */
     IR_LineDetect_Update();
 
     return turn_diff;

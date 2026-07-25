@@ -1,14 +1,14 @@
 /**
  * @file    pid.c
- * @brief   Generic PID controller implementation
+ * @brief   通用 PID 控制器实现
  *
- * Incremental PID with output clamping and anti-windup.
+ * 增量式 PID，带输出限幅和抗积分饱和。
  */
 
 #include "pid.h"
 
 /* ========================================================================
- * Public Functions
+ * 公开函数
  * ======================================================================== */
 
 void PID_Init(PID_t *pid, float kp, float ki, float kd, float min, float max)
@@ -34,7 +34,7 @@ float PID_Compute(PID_t *pid, float measured, float dt)
 {
     float error = pid->setpoint - measured;
 
-    /* Incremental PID formula:
+    /* 增量式 PID 公式：
      * output += Kp*(e(k) - e(k-1)) + Ki*e(k) + Kd*(e(k) - 2*e(k-1) + e(k-2)) */
     float p_term = pid->Kp * (error - pid->prev_error);
     float i_term = pid->Ki * error * dt;
@@ -42,14 +42,14 @@ float PID_Compute(PID_t *pid, float measured, float dt)
 
     pid->output += p_term + i_term + d_term;
 
-    /* Output clamping with anti-windup */
+    /* 输出限幅，带抗积分饱和 */
     if (pid->output > pid->out_max) {
         pid->output = pid->out_max;
     } else if (pid->output < pid->out_min) {
         pid->output = pid->out_min;
     }
 
-    /* Store errors for next iteration */
+    /* 保存误差值供下次迭代使用 */
     pid->prev_prev_error = pid->prev_error;
     pid->prev_error      = error;
 
@@ -69,5 +69,5 @@ void PID_SetGains(PID_t *pid, float kp, float ki, float kd)
     pid->Kp = kp;
     pid->Ki = ki;
     pid->Kd = kd;
-    PID_Reset(pid);  /* Reset state when gains change */
+    PID_Reset(pid);  /* 参数变更时重置状态 */
 }

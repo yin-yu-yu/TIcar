@@ -1,9 +1,9 @@
 /**
  * @file    uart_debug.c
- * @brief   Debug UART implementation (UART0, 115200bps)
+ * @brief   调试 UART 实现 (UART0, 115200bps)
  *
- * Hardware: UART0, PA10(TX), PA11(RX)
- * SysConfig initialization is in Debug/ti_msp_dl_config.c
+ * 硬件：UART0, PA10(TX), PA11(RX)
+ * SysConfig 初始化在 Debug/ti_msp_dl_config.c 中
  */
 
 #include "uart_debug.h"
@@ -13,14 +13,14 @@
 #include <string.h>
 
 /* ========================================================================
- * Public Functions
+ * 公开函数
  * ======================================================================== */
 
 void Debug_Printf(const char *fmt, ...)
 {
-    /* UART0 is configured in loopback mode (DataScope).
-     * For actual debug output, redirect to UART1 or disable loopback in SysConfig.
-     * For now, output to UART1 (Bluetooth port). */
+    /* UART0 配置为回环模式 (DataScope)。
+     * 如需实际调试输出，请重定向到 UART1 或禁用 SysConfig 中的回环。
+     * 目前输出到 UART1（蓝牙端口）。 */
     char buf[128];
     va_list args;
     va_start(args, fmt);
