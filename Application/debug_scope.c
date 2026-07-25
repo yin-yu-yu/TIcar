@@ -1,5 +1,6 @@
 /**
  * @file    debug_scope.c
+ * @brief   虚拟示波器 — 封装 DataScope_DP 协议
  * @brief   Virtual oscilloscope — wraps DataScope_DP protocol
  *
  * Sends real-time variable data to upper-computer visualization
@@ -23,6 +24,7 @@
 #include "DataScope_DP.h"
 
 /* ========================================================================
+ * 公开函数
  * Public Functions
  * ======================================================================== */
 

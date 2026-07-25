@@ -1,12 +1,12 @@
 /**
  * @file    uart_bt.c
- * @brief   Bluetooth UART implementation (UART1, 9600bps, DMA)
+ * @brief   蓝牙 UART 实现 (UART1, 9600bps, DMA)
  *
- * Hardware: UART1, PB6(TX), PB7(RX), DMA CH0
- * SysConfig initialization is in Debug/ti_msp_dl_config.c
+ * 硬件：UART1, PB6(TX), PB7(RX), DMA CH0
+ * SysConfig 初始化在 Debug/ti_msp_dl_config.c 中
  *
- * Most BT logic is in Application/bt_protocol.c (to be filled by team member).
- * This file provides low-level UART+DMA plumbing.
+ * 大部分蓝牙逻辑在 Application/bt_protocol.c 中（待团队成员填充）。
+ * 本文件提供底层 UART+DMA 基础设施。
  */
 
 #include "uart_bt.h"
@@ -16,19 +16,19 @@
 #include <string.h>
 
 /* ========================================================================
- * Module Variables
+ * 模块变量
  * ======================================================================== */
 #define BT_PACKET_SIZE  200
 static volatile uint8_t g_bt_buffer[BT_PACKET_SIZE];
 
 /* ========================================================================
- * Public Functions
+ * 公开函数
  * ======================================================================== */
 
 void BT_Init(void)
 {
-    /* DMA and UART1 already initialized by SysConfig.
-     * Configure DMA for first reception. */
+    /* DMA 和 UART1 已由 SysConfig 初始化。
+     * 配置 DMA 进行首次接收。 */
     BT_DMAConfig();
 }
 
@@ -40,7 +40,7 @@ bool BT_DataAvailable(void)
 
 uint8_t BT_ReadByte(void)
 {
-    /* Direct register read — used when not in DMA mode */
+    /* 直接读取寄存器 — 非 DMA 模式下使用 */
     if (DL_UART_Main_isRXFIFOEmpty(UART_1_INST)) {
         return 0;
     }

@@ -1,6 +1,6 @@
 /**
  * @file    kinematics.c
- * @brief   Differential drive kinematics implementation
+ * @brief   差速驱动运动学实现
  */
 
 #include "kinematics.h"
@@ -8,15 +8,15 @@
 #include <math.h>
 
 /* ========================================================================
- * Module Variables
+ * 模块变量
  * ======================================================================== */
-static float wheel_spacing;     /* Wheel spacing (m) */
-static float max_linear;        /* Max linear speed (m/s) */
-static float max_angular;       /* Max angular speed (rad/s) */
-static float min_turn_radius;   /* Minimum turn radius (m) */
+static float wheel_spacing;     /* 轮距 (m) */
+static float max_linear;        /* 最大线速度 (m/s) */
+static float max_angular;       /* 最大角速度 (rad/s) */
+static float min_turn_radius;   /* 最小转弯半径 (m) */
 
 /* ========================================================================
- * Public Functions
+ * 公开函数
  * ======================================================================== */
 
 void Kinematics_Init(void)
@@ -31,17 +31,17 @@ WheelSpeed_t Kinematics_Inverse(ChassisCmd_t cmd)
 {
     WheelSpeed_t wheels;
 
-    /* Clamp linear speed */
+    /* 限幅线速度 */
     if (cmd.vx > max_linear)  cmd.vx = max_linear;
     if (cmd.vx < -max_linear) cmd.vx = -max_linear;
 
-    /* Clamp angular speed */
+    /* 限幅角速度 */
     if (cmd.wz > max_angular)  cmd.wz = max_angular;
     if (cmd.wz < -max_angular) cmd.wz = -max_angular;
 
-    /* Enforce minimum turn radius for caster-wheel chassis:
-     * R = |vx / wz|, must be >= min_turn_radius.
-     * If too tight, reduce wz to keep R >= min_turn_radius. */
+    /* 万向轮底盘的最小转弯半径约束：
+     * R = |vx / wz|，必须 >= min_turn_radius。
+     * 若转弯过急，减小 wz 以保持 R >= min_turn_radius。 */
     if (fabsf(cmd.wz) > 0.001f) {
         float radius = fabsf(cmd.vx / cmd.wz);
         if (radius < min_turn_radius && fabsf(cmd.vx) > 0.001f) {
@@ -49,15 +49,15 @@ WheelSpeed_t Kinematics_Inverse(ChassisCmd_t cmd)
         }
     }
 
-    /* Differential drive inverse kinematics:
+    /* 差速驱动逆运动学：
      * V_left  = vx - wz * L/2
      * V_right = vx + wz * L/2
-     * where L = wheel_spacing */
+     * 其中 L = wheel_spacing */
     float half_diff = cmd.wz * wheel_spacing * 0.5f;
     wheels.left  = cmd.vx - half_diff;
     wheels.right = cmd.vx + half_diff;
 
-    /* Clamp individual wheel speeds */
+    /* 限幅各轮速度 */
     if (wheels.left  > max_linear)  wheels.left  = max_linear;
     if (wheels.left  < -max_linear) wheels.left  = -max_linear;
     if (wheels.right > max_linear)  wheels.right = max_linear;

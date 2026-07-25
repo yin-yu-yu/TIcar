@@ -1,13 +1,13 @@
 /**
  * @file    filter.c
- * @brief   Signal processing filter implementations
+ * @brief   信号处理滤波器实现
  */
 
 #include "filter.h"
 #include <math.h>
 
 /* ========================================================================
- * Public Functions
+ * 公开函数
  * ======================================================================== */
 
 float Filter_LowPass(float input, float *prev, float alpha)
@@ -20,7 +20,7 @@ float Filter_LowPass(float input, float *prev, float alpha)
 float Filter_Complementary(float accel_angle, float gyro_rate, float dt,
                            float alpha, float *fused_angle)
 {
-    /* High-pass on gyro (integration), low-pass on accel */
+    /* 陀螺仪高通（积分），加速度计低通 */
     float gyro_angle = *fused_angle + gyro_rate * dt;
     *fused_angle = alpha * accel_angle + (1.0f - alpha) * gyro_angle;
     return *fused_angle;

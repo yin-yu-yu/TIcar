@@ -1,6 +1,6 @@
 /**
  * @file    odometry.c
- * @brief   Wheel odometry implementation
+ * @brief   车轮里程计实现
  */
 
 #include "odometry.h"
@@ -10,18 +10,18 @@
 #include <string.h>
 
 /* ========================================================================
- * Module Variables
+ * 模块变量
  * ======================================================================== */
 static Odom_t g_odom;
-static float  g_distance;       /* Total distance traveled (m) */
+static float  g_distance;       /* 累计行驶距离 (m) */
 
-/** Encoder ticks to meters conversion:
- *  pulses → revolutions → meters
- *  meters = pulses / (PPR * Multiples * GearRatio) * WheelPerimeter */
-static float g_ticks_to_m;      /* 1 encoder tick = ? meters */
+/** 编码器脉冲 → 米 转换：
+ *  脉冲 → 圈数 → 米
+ *  米 = 脉冲 / (PPR × 倍频 × 减速比) × 轮周长 */
+static float g_ticks_to_m;      /* 1 个编码器脉冲 = ? 米 */
 
 /* ========================================================================
- * Public Functions
+ * 公开函数
  * ======================================================================== */
 
 void Odom_Init(void)
@@ -29,34 +29,34 @@ void Odom_Init(void)
     memset(&g_odom, 0, sizeof(Odom_t));
     g_distance = 0.0f;
 
-    /* Conversion factor: encoder ticks → wheel distance (m) */
+    /* 转换系数：编码器脉冲 → 车轮行驶距离 (m) */
     g_ticks_to_m = WHEEL_PERIMETER_M
                  / (ENCODER_PPR * ENCODER_MULTIPLES * MOTOR_GEAR_RATIO);
 }
 
 void Odom_Update(int32_t encL, int32_t encR, float dt)
 {
-    /* Convert encoder counts to distance traveled (m) */
+    /* 将编码器计数转换为行驶距离 (m) */
     float dL = (float)encL * g_ticks_to_m;
     float dR = (float)encR * g_ticks_to_m;
 
-    /* Average distance and heading change */
+    /* 平均位移和航向变化 */
     float d_center = (dR + dL) * 0.5f;
     float d_theta  = (dR - dL) / WHEEL_SPACING_M;
 
-    /* Update current velocity */
+    /* 更新当前速度 */
     if (dt > 0.0f) {
         g_odom.vx = d_center / dt;
         g_odom.vz = d_theta / dt;
     }
 
-    /* Dead-reckoning position update */
+    /* 航位推算位置更新 */
     float half_theta = d_theta * 0.5f;
     g_odom.x     += d_center * cosf(g_odom.theta + half_theta);
     g_odom.y     += d_center * sinf(g_odom.theta + half_theta);
     g_odom.theta += d_theta;
 
-    /* Normalize theta to [-PI, PI] */
+    /* 将 theta 归一化到 [-PI, PI] */
     while (g_odom.theta >  M_PI) g_odom.theta -= 2.0f * M_PI;
     while (g_odom.theta < -M_PI) g_odom.theta += 2.0f * M_PI;
 
