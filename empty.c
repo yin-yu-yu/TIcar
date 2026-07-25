@@ -64,7 +64,7 @@ int main(void)
 #ifdef CHASSIS_DEBUG
     OLED_ShowString(0, 0, "DEBUG MODE");
     OLED_Refresh_Gram();
-
+    delay_ms(3000);
     while (1)
     {
         Voltage = Get_battery_volt();
@@ -95,7 +95,7 @@ int main(void)
 #else
     OLED_ShowString(0, 0, "COMP MODE");
     OLED_Refresh_Gram();
-
+    delay_ms(3000);
     while (1)
     {
         Voltage = Get_battery_volt();
