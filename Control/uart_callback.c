@@ -3,154 +3,150 @@
 #include "board.h"
 #include "uart_callback.h"
 
-// À¶ÑÀÒ£¿ØÏà¹ØµÄ±êÖ¾Î»
-int Flag_Left, Flag_Right, Flag_Direction=0, Turn_Flag; // ·½Ïò¿ØÖÆ±êÖ¾Î»
+// è“ç‰™é¥æ§ç›¸å…³çš„æ ‡å¿—ä½
+int Flag_Left, Flag_Right, Flag_Direction=0, Turn_Flag; // æ–¹å‘æ§åˆ¶æ ‡å¿—ä½
 
-extern uint8_t PID_Send; // Íâ²¿ÉùÃ÷µÄPID·¢ËÍ±êÖ¾
+extern uint8_t PID_Send; // å¤–éƒ¨å£°æ˜çš„PIDå‘é€æ ‡å¿—
 
-#define BT_PACKET_SIZE (200) // ¶¨ÒåÀ¶ÑÀÊı¾İ°ü»º³åÇø´óĞ¡
-volatile uint8_t gBTPacket[BT_PACKET_SIZE]; // À¶ÑÀÊı¾İ½ÓÊÕ»º³åÇø
-volatile uint8_t gBTCounts = 0; // µ±Ç°½ÓÊÕÊı¾İ¼ÆÊı
-volatile uint8_t lastBTCounts = 0; // ÉÏ´Î½ÓÊÕÊı¾İ¼ÆÊı
-volatile bool gCheckBT; // À¶ÑÀÊı¾İ½ÓÊÕÍê³É±êÖ¾
+#define BT_PACKET_SIZE (200) // å®šä¹‰è“ç‰™æ•°æ®åŒ…ç¼“å†²åŒºå¤§å°
+volatile uint8_t gBTPacket[BT_PACKET_SIZE]; // è“ç‰™æ•°æ®æ¥æ”¶ç¼“å†²åŒº
+volatile uint8_t gBTCounts = 0; // å½“å‰æ¥æ”¶æ•°æ®è®¡æ•°
+volatile uint8_t lastBTCounts = 0; // ä¸Šæ¬¡æ¥æ”¶æ•°æ®è®¡æ•°
+volatile bool gCheckBT; // è“ç‰™æ•°æ®æ¥æ”¶å®Œæˆæ ‡å¿—
 
-uint8_t RecvOverFlag = 0; // ½ÓÊÕÍê³É±êÖ¾
+uint8_t RecvOverFlag = 0; // æ¥æ”¶å®Œæˆæ ‡å¿—
 
-void bt_control(uint8_t recv); // À¶ÑÀÊı¾İ´¦Àíº¯ÊıÉùÃ÷
+void bt_control(uint8_t recv); // è“ç‰™æ•°æ®å¤„ç†å‡½æ•°å£°æ˜
 
 /**
- * @brief ÅäÖÃDMAÓÃÓÚÀ¶ÑÀÊı¾İ½ÓÊÕ
- * ×÷ÓÃ£ºÉèÖÃDMAÍ¨µÀ²ÎÊı£¬ÊµÏÖUART½ÓÊÕÊı¾İµÄ×Ô¶¯°áÔË
+ * @brief é…ç½®DMAç”¨äºè“ç‰™æ•°æ®æ¥æ”¶
+ * ä½œç”¨ï¼šè®¾ç½®DMAé€šé“å‚æ•°ï¼Œå®ç°UARTæ¥æ”¶æ•°æ®çš„è‡ªåŠ¨æ¬è¿
  */
 void BT_DAMConfig(void)
 {
-    DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID); // ÏÈ½ûÓÃDMAÍ¨µÀ
-    DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)(&UART_1_INST->RXDATA));// ÉèÖÃÔ´µØÖ·ÎªUART½ÓÊÕ¼Ä´æÆ÷
-    DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t) &gBTPacket[0]); // ÉèÖÃÄ¿±êµØÖ·Îª½ÓÊÕ»º³åÇø
-    DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, BT_PACKET_SIZE); // ÉèÖÃ´«Êä´óĞ¡
-    DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID); // ÆôÓÃDMAÍ¨µÀ
+    DL_DMA_disableChannel(DMA, DMA_CH0_CHAN_ID); // å…ˆç¦ç”¨DMAé€šé“
+    DL_DMA_setSrcAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t)(&UART_1_INST->RXDATA));// è®¾ç½®æºåœ°å€ä¸ºUARTæ¥æ”¶å¯„å­˜å™¨
+    DL_DMA_setDestAddr(DMA, DMA_CH0_CHAN_ID, (uint32_t) &gBTPacket[0]); // è®¾ç½®ç›®æ ‡åœ°å€ä¸ºæ¥æ”¶ç¼“å†²åŒº
+    DL_DMA_setTransferSize(DMA, DMA_CH0_CHAN_ID, BT_PACKET_SIZE); // è®¾ç½®ä¼ è¾“å¤§å°
+    DL_DMA_enableChannel(DMA, DMA_CH0_CHAN_ID); // å¯ç”¨DMAé€šé“
 }
 
 /**
- * @brief À¶ÑÀÊı¾İ»º³åÇø´¦Àíº¯Êı
- * ×÷ÓÃ£º¹ÜÀí½ÓÊÕµ½µÄÀ¶ÑÀÊı¾İ£¬´¦ÀíÊı¾İ³¬Ê±ºÍ°ëÂúÇé¿ö
+ * @brief è“ç‰™æ•°æ®ç¼“å†²åŒºå¤„ç†å‡½æ•°
+ * ä½œç”¨ï¼šç®¡ç†æ¥æ”¶åˆ°çš„è“ç‰™æ•°æ®ï¼Œå¤„ç†æ•°æ®è¶…æ—¶å’ŒåŠæ»¡æƒ…å†µ
  */
 void BTBufferHandler(void)
 {
     uint32_t tick = 0;
-    static uint8_t handleflag = 0; // Êı¾İ´¦Àí±êÖ¾
-    static uint8_t handleSize = 0; // ÒÑ´¦ÀíÊı¾İ´óĞ¡
-    static uint8_t lastSize = 0; // ÉÏ´Î½ÓÊÕÊı¾İ´óĞ¡
+    static uint8_t handleflag = 0; // æ•°æ®å¤„ç†æ ‡å¿—
+    static uint8_t handleSize = 0; // å·²å¤„ç†æ•°æ®å¤§å°
+    static uint8_t lastSize = 0; // ä¸Šæ¬¡æ¥æ”¶æ•°æ®å¤§å°
 
-    // ¼ÆËãÒÑ½ÓÊÕÊı¾İ´óĞ¡£¨×Ü´óĞ¡¼õÈ¥Ê£Óà´«Êä´óĞ¡£©
+    // è®¡ç®—å·²æ¥æ”¶æ•°æ®å¤§å°ï¼ˆæ€»å¤§å°å‡å»å‰©ä½™ä¼ è¾“å¤§å°ï¼‰
     uint8_t recvsize = BT_PACKET_SIZE - DL_DMA_getTransferSize(DMA, DMA_CH0_CHAN_ID);
 
-    if( recvsize != lastSize) // ÓĞĞÂÊı¾İµ½´ï
+    if( recvsize != lastSize) // æœ‰æ–°æ•°æ®åˆ°è¾¾
     {
-        handleflag=1; // ÉèÖÃĞèÒª´¦Àí±êÖ¾
-        tick = Systick_getTick(); // Ë¢ĞÂ×îºó½ÓÊÕÊ±¼ä´Á
+        handleflag=1; // è®¾ç½®éœ€è¦å¤„ç†æ ‡å¿—
+        tick = Systick_getTick(); // åˆ·æ–°æœ€åæ¥æ”¶æ—¶é—´æˆ³
     }
-    else // ÎŞĞÂÊı¾İ
+    else // æ— æ–°æ•°æ®
     {
-        // ¼ì²éÊÇ·ñ³¬Ê±£¨1ms£©ÇÒÓĞ´ı´¦ÀíÊı¾İ
+        // æ£€æŸ¥æ˜¯å¦è¶…æ—¶ï¼ˆ1msï¼‰ä¸”æœ‰å¾…å¤„ç†æ•°æ®
         if( ((tick-Systick_getTick())&SysTickMAX_COUNT) >= SysTick_MS(1) && handleflag == 1)
         {
-            handleflag = 0; // Çå³ı´¦Àí±êÖ¾
-            
-            // ´¦ÀíĞÂ½ÓÊÕµÄÊı¾İ
+            handleflag = 0; // æ¸…é™¤å¤„ç†æ ‡å¿—
+
+            // å¤„ç†æ–°æ¥æ”¶çš„æ•°æ®
             for(uint8_t i=handleSize;i<recvsize;i++)
                 bt_control(gBTPacket[i]);
 
-            handleSize = recvsize; // ¸üĞÂÒÑ´¦ÀíÎ»ÖÃ
+            handleSize = recvsize; // æ›´æ–°å·²å¤„ç†ä½ç½®
 
-            // »º³åÇø¹ı°ëÊ±ÖØÖÃDMA£¬·ÀÖ¹Òç³ö
+            // ç¼“å†²åŒºè¿‡åŠæ—¶é‡ç½®DMAï¼Œé˜²æ­¢æº¢å‡º
             if( recvsize >= BT_PACKET_SIZE/2 )
             {
                 recvsize=0;
                 handleSize=0;
                 lastSize = 0;
-                BT_DAMConfig(); // ÖØĞÂÅäÖÃDMA
+                BT_DAMConfig(); // é‡æ–°é…ç½®DMA
             }
         }
     }
 
-    lastSize = recvsize; // ±£´æµ±Ç°½ÓÊÕ´óĞ¡
+    lastSize = recvsize; // ä¿å­˜å½“å‰æ¥æ”¶å¤§å°
 }
 
 /**
- * @brief UART1ÖĞ¶Ï·şÎñº¯Êı
- * ×÷ÓÃ£º´¦ÀíUART½ÓÊÕÖĞ¶ÏºÍDMAÍê³ÉÖĞ¶Ï
+ * @brief UART1ä¸­æ–­æœåŠ¡å‡½æ•°
+ * ä½œç”¨ï¼šå¤„ç†UARTæ¥æ”¶ä¸­æ–­å’ŒDMAå®Œæˆä¸­æ–­
  */
 void UART_1_INST_IRQHandler(void)
 {
     switch (DL_UART_Main_getPendingInterrupt(UART_1_INST)) {
-        case DL_UART_IIDX_RX: // ½ÓÊÕÖĞ¶Ï
-            gBTPacket[gBTCounts++] = DL_UART_Main_receiveData(UART_1_INST); // Ö±½Ó¶ÁÈ¡Êı¾İ
+        case DL_UART_IIDX_RX: // æ¥æ”¶ä¸­æ–­
+            gBTPacket[gBTCounts++] = DL_UART_Main_receiveData(UART_1_INST); // ç›´æ¥è¯»å–æ•°æ®
             break;
-        case DL_UART_MAIN_IIDX_DMA_DONE_RX: // DMA½ÓÊÕÍê³É
-            BT_DAMConfig(); // ÖØĞÂÅäÖÃDMA
+        case DL_UART_MAIN_IIDX_DMA_DONE_RX: // DMAæ¥æ”¶å®Œæˆ
+            BT_DAMConfig(); // é‡æ–°é…ç½®DMA
         default:
             break;
     }
 }
 /**
- * @brief À¶ÑÀÊı¾İ´¦Àíº¯Êı
- * ×÷ÓÃ£º´¦Àí½ÓÊÕµ½µÄÀ¶ÑÀÊı¾İ
+ * @brief è“ç‰™æ•°æ®å¤„ç†å‡½æ•°
+ * ä½œç”¨ï¼šå¤„ç†æ¥æ”¶åˆ°çš„è“ç‰™æ•°æ®
  */
 
 void bt_control(uint8_t recv)
 {
-    static  int Usart_Receive=0;//À¶ÑÀ½ÓÊÕÏà¹Ø±äÁ¿
+    static  int Usart_Receive=0;//è“ç‰™æ¥æ”¶ç›¸å…³å˜é‡
     static uint8_t Flag_PID,i,j,Receive[50];
     static float Data;
 
-    // ½ÓÊÕ·¢ËÍ¹ıÀ´µÄÊı¾İ±£´æ
+    // æ¥æ”¶å‘é€è¿‡æ¥çš„æ•°æ®ä¿å­˜
     Usart_Receive = recv;
 
-	if(Usart_Receive==0x4B) 
-			//Enter the APP steering control interface
-		  //½øÈëAPP×ªÏò¿ØÖÆ½çÃæ
-			Turn_Flag=1;  
-	  else	if(Usart_Receive==0x49||Usart_Receive==0x4A) 
-      // Enter the APP direction control interface		
-			//½øÈëAPP·½Ïò¿ØÖÆ½çÃæ	
-			Turn_Flag=0;	
-		
-		if(Turn_Flag==0) 
+	if(Usart_Receive==0x4B)
+		//è¿›å…¥APPè½¬å‘æ§åˆ¶ç•Œé¢
+		Turn_Flag=1;
+	else if(Usart_Receive==0x49||Usart_Receive==0x4A)
+		//è¿›å…¥APPæ–¹å‘æ§åˆ¶ç•Œé¢
+		Turn_Flag=0;
+
+	if(Turn_Flag==0)
+	{
+		//APPæ‘‡æ†æ§åˆ¶ç•Œé¢å‘½ä»¤
+		if(Usart_Receive>=0x41&&Usart_Receive<=0x48)
 		{
-			//App rocker control interface command
-			//APPÒ¡¸Ë¿ØÖÆ½çÃæÃüÁî
-			if(Usart_Receive>=0x41&&Usart_Receive<=0x48)  
-			{	
-				Flag_Direction=Usart_Receive-0x40;
-			}
-			else	if(Usart_Receive<=8)   
-			{			
-				Flag_Direction=Usart_Receive;
-			}	
-			else  Flag_Direction=0;
+			Flag_Direction=Usart_Receive-0x40;
 		}
-		else if(Turn_Flag==1)
+		else	if(Usart_Receive<=8)
 		{
-			//APP steering control interface command
-			//APP×ªÏò¿ØÖÆ½çÃæÃüÁî
-			if     (Usart_Receive==0x43) Flag_Left=0,Flag_Right=1; //Right rotation //ÓÒ×Ô×ª
-			else if(Usart_Receive==0x47) Flag_Left=1,Flag_Right=0; //Left rotation  //×ó×Ô×ª
-			else                         Flag_Left=0,Flag_Right=0;
-			if     (Usart_Receive==0x41||Usart_Receive==0x45) Flag_Direction=Usart_Receive-0x40;
-			else  Flag_Direction=0;
+			Flag_Direction=Usart_Receive;
 		}
-		if(Usart_Receive==0x58)  RC_Velocity=RC_Velocity+100; //Accelerate the keys, +100mm/s //¼ÓËÙ°´¼ü£¬+100mm/s
-		if(Usart_Receive==0x59)  RC_Velocity=RC_Velocity-100; //Slow down buttons,   -100mm/s //¼õËÙ°´¼ü£¬-100mm/s
-	  
-    if(Usart_Receive==0x7B) Flag_PID=1;   //APP²ÎÊıÖ¸ÁîÆğÊ¼Î»
-    if(Usart_Receive==0x7D) Flag_PID=2;   //APP²ÎÊıÖ¸ÁîÍ£Ö¹Î»
-    if(Flag_PID==1)  //²É¼¯Êı¾İ
+		else  Flag_Direction=0;
+	}
+	else if(Turn_Flag==1)
+	{
+		//APPè½¬å‘æ§åˆ¶ç•Œé¢å‘½ä»¤
+		if     (Usart_Receive==0x43) Flag_Left=0,Flag_Right=1; //å³è‡ªè½¬
+		else if(Usart_Receive==0x47) Flag_Left=1,Flag_Right=0; //å·¦è‡ªè½¬
+		else                         Flag_Left=0,Flag_Right=0;
+		if     (Usart_Receive==0x41||Usart_Receive==0x45) Flag_Direction=Usart_Receive-0x40;
+		else  Flag_Direction=0;
+	}
+	if(Usart_Receive==0x58)  RC_Velocity=RC_Velocity+100; //åŠ é€ŸæŒ‰é”®ï¼Œ+100mm/s
+	if(Usart_Receive==0x59)  RC_Velocity=RC_Velocity-100; //å‡é€ŸæŒ‰é”®ï¼Œ-100mm/s
+
+    if(Usart_Receive==0x7B) Flag_PID=1;   //APPå‚æ•°æŒ‡ä»¤èµ·å§‹ä½
+    if(Usart_Receive==0x7D) Flag_PID=2;   //APPå‚æ•°æŒ‡ä»¤åœæ­¢ä½
+    if(Flag_PID==1)  //é‡‡é›†æ•°æ®
     {
             Receive[i]=Usart_Receive;
             i++;
     }
-    if(Flag_PID==2)  //·ÖÎöÊı¾İ
+    if(Flag_PID==2)  //åˆ†ææ•°æ®
     {
             if(Receive[3]==0x50)               PID_Send=1;
             else if(Receive[1]!=0x23)
@@ -162,21 +158,21 @@ void bt_control(uint8_t recv)
                 switch(Receive[1])
                 {
                      case 0x30:  Velocity_KP=Data;      break;
-					 case 0x31:  Velocity_KI=Data;      break; 
-					 case 0x32:  BaseSpeed=Data;break; 
-					 case 0x33:  Turn90Angle =Data; break;
-					 case 0x34:  TurnMaxAngle=Data; break;
-					 case 0x35:  TurnMidAngle=Data; break; 
-					 case 0x36:  TurnMinAngle=Data; break; 
-					 case 0x37:  ForwardLimit=Data; break;
-					 case 0x38:  break; 	
+				 case 0x31:  Velocity_KI=Data;      break;
+				 case 0x32:  BaseSpeed=Data;break;
+				 case 0x33:  Turn90Angle =Data; break;
+				 case 0x34:  TurnMaxAngle=Data; break;
+				 case 0x35:  TurnMidAngle=Data; break;
+				 case 0x36:  TurnMinAngle=Data; break;
+				 case 0x37:  ForwardLimit=Data; break;
+				 case 0x38:  break;
                 }
             }
                 Flag_PID=0;
                 i=0;
                 j=0;
                 Data=0;
-                memset(Receive, 0, sizeof(uint8_t)*50);//Êı×éÇåÁã
+                memset(Receive, 0, sizeof(uint8_t)*50);//æ•°ç»„æ¸…é›¶
     }
 
 }

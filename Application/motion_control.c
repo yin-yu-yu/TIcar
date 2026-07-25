@@ -1,17 +1,17 @@
 /**
  * @file    motion_control.c
- * @brief   Motion controller — chassis command → PID velocity loop → motor PWM
+ * @brief   运动控制器 — 底盘指令 → PID 速度环 → 电机 PWM
  *
- * OWNER:  Team Member
- * STATUS: COMPLETE — PID velocity control with encoder feedback
+ * 负责人：团队成员
+ * 状态：已完成 — 带编码器反馈的 PID 速度控制
  *
- * Data flow (200Hz, from TIMER_0 ISR):
- *   1. SM_Run() → MotionControl_SetTarget(cmd)  — set desired chassis motion
- *   2. MotionControl_Update()                   — read encoders, PID, output PWM
+ * 数据流（200Hz，来自 TIMER_0 ISR）：
+ *   1. SM_Run() → MotionControl_SetTarget(cmd)  — 设置期望底盘运动
+ *   2. MotionControl_Update()                   — 读取编码器、PID、输出 PWM
  *
- * Each call to SetTarget stores the target; Update executes the PID loop.
- * This decoupling allows the state machine to set targets inside its handler,
- * while Update runs uniformly after SM_Run() in the ISR.
+ * SetTarget 存储目标值；Update 执行 PID 循环。
+ * 这种解耦允许状态机在其处理函数中设置目标，
+ * 而 Update 在 ISR 中的 SM_Run() 之后统一运行。
  */
 
 #include "motion_control.h"
@@ -21,38 +21,37 @@
 #include "motor.h"
 #include "encoder.h"
 #include "kinematics.h"
-#include "filter.h"       /* for dead-zone */
+#include "filter.h"       /* 用于死区滤波 */
 #include <math.h>
 #include <stddef.h>
 
 /* ========================================================================
- * Module Variables
+ * 模块变量
  * ======================================================================== */
 static PID_t g_pid_left;
 static PID_t g_pid_right;
 
-static float  g_target_left;   /* Target wheel speed (m/s), left  */
-static float  g_target_right;  /* Target wheel speed (m/s), right */
-static bool   g_target_valid;  /* True when a valid target is set  */
+static float  g_target_left;   /* 左轮目标速度 (m/s) */
+static float  g_target_right;  /* 右轮目标速度 (m/s) */
+static bool   g_target_valid;  /* 有效目标已设置时为真 */
 
-/** Encoder ticks → meters: same conversion factor as odometry */
+/** 编码器脉冲 → 米：与里程计使用相同的转换系数 */
 static float  g_ticks_to_m;
 
-/* ---- Encoder count accumulators (from encoder ISR) ---- */
+/* ---- 编码器计数累加器（来自编码器 ISR）---- */
 extern int32_t Get_Encoder_countA;
 extern int32_t Get_Encoder_countB;
 
-/* ---- Stop flag (defined in control.c, used across project) ---- */
+/* ---- 停止标志（在 control.c 中定义，全项目使用）---- */
 extern uint8_t Flag_Stop;
 
 /* ========================================================================
  * 公开函数
- * Public Functions
  * ======================================================================== */
 
 void MotionControl_Init(void)
 {
-    /* Init PID controllers with defaults from pid_config.h */
+    /* 使用 pid_config.h 中的默认值初始化 PID 控制器 */
     PID_Init(&g_pid_left,
              VELOCITY_KP_DEFAULT, VELOCITY_KI_DEFAULT, VELOCITY_KD_DEFAULT,
              VELOCITY_OUT_MIN, VELOCITY_OUT_MAX);
@@ -64,66 +63,66 @@ void MotionControl_Init(void)
     g_target_right = 0.0f;
     g_target_valid = false;
 
-    /* Encoder ticks → meters conversion */
+    /* 编码器脉冲 → 米 转换 */
     g_ticks_to_m = WHEEL_PERIMETER_M
                  / (ENCODER_PPR * (float)ENCODER_MULTIPLES * MOTOR_GEAR_RATIO);
 }
 
 void MotionControl_SetTarget(ChassisCmd_t cmd)
 {
-    /* Convert chassis command → wheel speed targets via inverse kinematics */
+    /* 通过逆运动学将底盘指令 → 车轮速度目标 */
     WheelSpeed_t wheels = Kinematics_Inverse(cmd);
 
     g_target_left  = wheels.left;
     g_target_right = wheels.right;
     g_target_valid = true;
 
-    /* Set PID setpoints */
+    /* 设置 PID 目标值 */
     PID_SetSetpoint(&g_pid_left,  wheels.left);
     PID_SetSetpoint(&g_pid_right, wheels.right);
 }
 
 void MotionControl_Update(void)
 {
-    /* ---- Safety: stop flag halts motors immediately ---- */
+    /* ---- 安全保护：停止标志立即停止电机 ---- */
     if (Flag_Stop || !g_target_valid) {
         Motor_Stop();
         return;
     }
 
-    /* ---- Read encoder counts (accumulated since last read) ---- */
+    /* ---- 读取编码器计数（自上次读取以来的累计值）---- */
     int32_t encL = Encoder_GetCountA();
     int32_t encR = Encoder_GetCountB();
 
-    /* Reset for next interval */
+    /* 复位以用于下一间隔 */
     Encoder_Reset();
 
-    /* ---- Convert encoder counts to speed (m/s) ----
+    /* ---- 将编码器计数转换为速度 (m/s) ----
      * speed = pulses * meters_per_tick / dt
      *
-     * Sign convention:
-     *   positive encoder count → forward motion
-     *   positive PID output → forward PWM (Motor_SetPWM convention) */
+     * 符号约定：
+     *   正编码器计数 → 前进运动
+     *   正 PID 输出 → 正向 PWM（Motor_SetPWM 约定） */
     float dt = CONTROL_DT_S;  /* 0.005s */
     float speedL = (float)encL * g_ticks_to_m / dt;
     float speedR = (float)encR * g_ticks_to_m / dt;
 
-    /* Apply dead-zone to filter encoder noise at very low speeds */
+    /* 对极低速下的编码器噪声应用死区滤波 */
     speedL = Filter_DeadZone(speedL, 0.001f);
     speedR = Filter_DeadZone(speedR, 0.001f);
 
-    /* ---- PID velocity control ----
-     * Note: right motor may need sign flip depending on mounting orientation.
-     * When both motors are mounted mirror-symmetric, one rotates opposite
-     * to achieve the same forward direction. The sign correction belongs
-     * in Motor_SetPWM, not here. */
+    /* ---- PID 速度控制 ----
+     * 注意：右电机可能需要根据安装方向对符号取反。
+     * 当两个电机镜像对称安装时，一个电机需要反向旋转
+     * 才能实现相同的向前方向。符号修正应在 Motor_SetPWM
+     * 中处理，而非此处。 */
     float pwm_l = PID_Compute(&g_pid_left,  speedL, dt);
     float pwm_r = PID_Compute(&g_pid_right, speedR, dt);
 
-    /* ---- Output to motors ----
-     * PWM range: ±VELOCITY_OUT_MAX (±7800)
-     * Right motor sign flipped to match mechanical mounting orientation
-     * (motors are mounted mirror-symmetric on the chassis) */
+    /* ---- 输出到电机 ----
+     * PWM 范围：±VELOCITY_OUT_MAX (±7800)
+     * 右电机符号取反以匹配机械安装方向
+     * （电机在底盘上镜像对称安装） */
     Motor_SetPWM((int16_t)pwm_l, (int16_t)(-pwm_r));
 }
 
