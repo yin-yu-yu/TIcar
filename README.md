@@ -96,20 +96,27 @@ project/
 
 ## 调试开关 (CHASSIS_DEBUG)
 
-工程支持两种编译模式，在 `empty.c` 第 15 行控制：
+工程支持两种编译模式，在 `empty.c` 第 18 行控制：
 
 ```c
 #define CHASSIS_DEBUG    // 取消注释 = 调试模式
 
 #ifdef CHASSIS_DEBUG
-    // 调试循环: 队员各自添加测试代码，互不干扰
+    // 调试循环: 13 项接口自检（电机/编码器/IR/PID/运动学/里程计/...）
+    //           自检通过后进入 while(1) 主循环
+    //           各队员可在调试区添加测试代码
 #else
-    // 比赛循环: 完整状态机运行
+    // 比赛循环: 完整状态机运行 (TIMER ISR 200Hz 实时控制)
 #endif
 ```
 
+**调试模式流程：**
+1. 上电后依次执行 13 项接口自检（通过串口输出 PASS/SKIP）
+2. 自检通过后进入 `while(1)` 主循环
+3. 队员在各自调试区添加测试代码，互不干扰
+
 **多人协作流程：**
-1. 队员调试时取消注释，在调试段加自己的测试代码
+1. 队员调试时取消注释 `CHASSIS_DEBUG`，在调试段加自己的测试代码
 2. 所有队员测试完毕后注释掉，切换到比赛模式
 3. 不要在调试段之外修改共享模块，避免 Git 冲突
 
@@ -119,30 +126,26 @@ project/
 
 > 队员可将对应模块的提示词直接粘贴给自己的 AI agent。
 
-### 模块 1: MPU6050 移植
+### 模块 1: MPU6050 移植 ✅ 已完成
 
 ```
-从参考工程 [源工程路径] 移植 MPU6050 驱动到当前工程。
+✅ 已从 WHEELTEC_C07A_BalanceCar 移植完成。
 
-目标: Hardware/mpu6050.c (替换 stub)
-接口: Hardware/mpu6050.h (保持现有，可扩展)
+实现方案: Mahony AHRS（四元数 + PI 修正），无需 DMP 固件依赖
 
 移植文件:
-- bsp_mpu6050.c/h — MPU6050 I2C 底层读写
-- inv_mpu.c/h — InvenSense MPU 驱动库
-- inv_mpu_dmp_motion_driver.c/h — DMP 运动驱动
+- Hardware/bsp_siic.c/h  — 软件 I2C 抽象层 (PA0=SDA, PA1=SCL)
+- Hardware/mpu6050.c/h   — MPU6050 驱动 + Mahony AHRS 姿态解算
 
-要求:
-1. 实现 mpu6050.h 中所有函数
-2. MPU6050_Init() 完成 I2C 初始化 + DMP 固件加载
-3. MPU6050_GetYaw() 返回稳定的 Z 轴偏航角
-4. DMP 采样率 200Hz (匹配控制循环)
+接口状态:
+- MPU6050_Init()           ✅ I2C 初始化 + WHO_AM_I 验证 + 寄存器配置
+- MPU6050_DataReady()      ✅ 读取成功后返回 true
+- MPU6050_Read()           ✅ 读陀螺+加计 → Mahony AHRS → 欧拉角
+- MPU6050_GetYaw/Pitch/Roll() ✅ 返回 Mahony 解算的欧拉角
+- MPU6050_GetGyroZ()       ✅ 返回 Z 轴角速度 (dps)
 
-依赖:
-- I2C 函数可参考 Hardware/oled.c 中的软件 I2C
-- 如用硬件 I2C，需在 empty.syscfg 配置并重新生成 ti_msp_dl_config
-
-验证: CHASSIS_DEBUG 模式下调用 MPU6050_GetYaw() 并通过 Debug_Printf 输出
+配置: 陀螺 ±2000dps, 加计 ±2g, DLPF 44Hz, 采样率 200Hz
+验证: empty.c 测试 13 中完成接口自检
 ```
 
 ### 模块 2: 电机驱动标准化

@@ -8,9 +8,9 @@
 
 | 状态 | 数量 | 说明 |
 |------|------|------|
-| ✅ 已完成 | 19 | 生产就绪 |
+| ✅ 已完成 | 20 | 生产就绪 |
 | 🔶 基本完成 | 1 | 可用，有小 TODO |
-| ❌ 待开发 | 1 | 完全空壳 STUB |
+| ❌ 待开发 | 0 | — |
 | 📦 遗留（待废弃） | 4 | 功能完整，逐步迁移中 |
 
 ---
@@ -48,20 +48,20 @@
 | 状态上报 `{A...}$` | ✅ 已完成 | 速度/电量上报 |
 | PID 参数上报 `{C...}$` | ✅ 已完成 | 参数查询响应 |
 
-### 队员 D：MPU6050 移植 ❌
+### 队员 D：MPU6050 移植 ✅
 
 | 子任务 | 状态 | 备注 |
 |--------|------|------|
-| I2C 初始化 + 引脚配置 | ❌ 待开发 | 当前 `MPU6050_Init()` 为空 |
-| DMP 固件加载 | ❌ 待开发 | 需从参考工程移植 `inv_mpu.c/h` |
-| `MPU6050_DataReady()` 实现 | ❌ 待开发 | DMP 中断或 FIFO 检查 |
-| `MPU6050_Read()` 实现 | ❌ 待开发 | FIFO 读取 + 四元数→欧拉角 |
-| `MPU6050_GetYaw/Pitch/Roll()` 实现 | ❌ 待开发 | 全部返回 0.0f |
-| `MPU6050_GetGyroZ()` 实现 | ❌ 待开发 | 返回 0.0f |
-| 移植参考文件：`bsp_mpu6050.c/h`、`inv_mpu.c/h`、`inv_mpu_dmp_motion_driver.c/h` | ❌ 待开发 | 需从源工程获取 |
-| DMP 采样率设为 200Hz | ❌ 待开发 | 匹配控制循环 |
-| 调试循环测试代码 | ❌ 待开发 | `empty.c` `[Member-D]` 段 |
-| **这是当前唯一剩余的大块工作** | | |
+| I2C 初始化 + 引脚配置 | ✅ 已完成 | `Hardware/bsp_siic.c/h` — 软件 I2C (PA0=SDA, PA1=SCL) |
+| 传感器初始化 + WHO_AM_I 验证 | ✅ 已完成 | `MPU6050_Init()` — 陀螺 ±2000dps, 加计 ±2g, DLPF 44Hz, 采样率 200Hz |
+| `MPU6050_DataReady()` 实现 | ✅ 已完成 | 读取成功后返回 true |
+| `MPU6050_Read()` 实现 | ✅ 已完成 | 读取陀螺+加计原始数据，Mahony AHRS 解算姿态角 |
+| `MPU6050_GetYaw/Pitch/Roll()` 实现 | ✅ 已完成 | 返回 Mahony AHRS 解算的欧拉角 |
+| `MPU6050_GetGyroZ()` 实现 | ✅ 已完成 | 返回 Z 轴角速度 (dps) |
+| Mahony AHRS 姿态解算 | ✅ 已完成 | 四元数 + PI 修正，无需 DMP 固件 |
+| 从 WHEELTEC_C07A_BalanceCar 移植 | ✅ 已完成 | `bsp_siic.c/h` + `mpu6050.c/h` |
+| 调试循环测试代码 | ✅ 已完成 | `empty.c` `[Member-D]` 段 |
+| **MPU6050 模块已全部完成！** | | **Mahony AHRS，无 DMP 依赖** |
 
 ---
 
@@ -81,7 +81,8 @@
 | 按键 | `Hardware/key.c/h` | ✅ | 单击/双击/长按 |
 | LED | `Hardware/led.c/h` | ✅ | 开关/闪烁 |
 | 板级支持 | `Hardware/board.c/h` | ✅ | SysTick, delay_ms, printf |
-| **MPU6050** | **`Hardware/mpu6050.c/h`** | **❌** | **全部返回 0 — 待移植** |
+| 软件 I2C | `Hardware/bsp_siic.c/h` | ✅ | `User_sIICDev.write/read` 抽象接口 |
+| **MPU6050** | **`Hardware/mpu6050.c/h`** | **✅** | **Mahony AHRS + 软件 I2C，从 WHEELTEC 移植** |
 
 ### Middleware 中间层
 
@@ -110,7 +111,7 @@
 
 - [ ] **Line 125** — `g_sm.entry_tick = 0` 替换为实际 SysTick 值，实现状态超时功能
 - [ ] **Line 180** — `Handle_Init()` 中添加传感器自检（MPU6050 应答、编码器脉冲、IR 传感器状态）
-- [ ] **Line 77** — MPU6050 移植完成后，取消 `SM_Init()` 中 `MPU6050_Init()` 的注释
+- [x] **Line 77** — ~~MPU6050 移植完成后，取消 `SM_Init()` 中 `MPU6050_Init()` 的注释~~ ✅ 已完成
 
 ---
 
@@ -139,13 +140,12 @@
 ## 六、下一步行动
 
 ### 🔴 高优先级
-1. **队员 D：移植 MPU6050** — 整个工程唯一缺失的硬件驱动，阻塞 IMU 相关功能
-2. **队长：完善状态机 2 个 TODO** — 传感器自检 + 状态超时
+1. **队长：完善状态机 2 个 TODO** — 传感器自检 + 状态超时
 
 ### 🟡 中优先级
-3. 创建 `CLAUDE.md` — 方便 AI agent 协作
-4. 确认 MPU6050 I2C 引脚并在 `empty.syscfg` 中配置
+2. 创建 `CLAUDE.md` — 方便 AI agent 协作
+3. 确认 MPU6050 I2C 引脚已在 `empty.syscfg` 中配置
 
 ### 🟢 低优先级
-5. 清理 `Control/` 遗留代码（确认无误后）
-6. 清理空目录和空文件
+4. 清理 `Control/` 遗留代码（确认无误后）
+5. 清理空目录和空文件
