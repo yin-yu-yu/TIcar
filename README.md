@@ -74,19 +74,24 @@ project/
 
 ## 各模块状态
 
+> 详见 [`TODO.md`](TODO.md) — 队员进度跟踪
+
 | 模块 | 状态 | 负责人 | 备注 |
 |------|------|--------|------|
-| 状态机 | 框架就绪 | **队长** | 需根据比赛规则补充 |
-| 电机 + PWM | 已有 | (队员) | 接口已标准化 |
-| 编码器 | 已有 | (队员) | 接口已标准化 |
-| **MPU6050** | **STUB 待移植** | (队员) | 需从其他工程移植 |
-| 四路循迹 | 已有 | (队员) | IR_Module → ir_track |
-| 蓝牙协议 | 已有 | (队员) | uart_callback → bt_protocol |
-| 调试串口 | 已有 | (队员) | UART0 |
-| OLED 显示 | 已有 | — | 状态/电压/速度 |
-| PID 控制 | 新实现 | — | Middleware/pid.c |
-| 运动学 | 新实现 | — | Middleware/kinematics.c |
-| 里程计 | 新实现 | — | Middleware/odometry.c |
+| 状态机 | 🔶 基本完成 | **队长** | 2 个 TODO 待完善 |
+| 运动控制 PID | ✅ 已完成 | 队员 | 速度闭环完整实现 |
+| 巡线策略 | ✅ 已完成 | 队员 | 从 IR_Module 迁移完毕 |
+| 蓝牙协议 | ✅ 已完成 | 队员 | 从 uart_callback 迁移完毕 |
+| 虚拟示波器 | ✅ 已完成 | — | DataScope 协议封装 |
+| 电机 + PWM | ✅ 已完成 | 队员 | 接口已标准化 |
+| 编码器 | ✅ 已完成 | 队员 | 接口已标准化 |
+| **MPU6050** | **❌ STUB** | **队员 D** | **唯一待移植模块** |
+| 四路循迹 | ✅ 已完成 | 队员 | IR_Module → ir_track |
+| 调试串口 | ✅ 已完成 | — | UART0 |
+| OLED 显示 | ✅ 已完成 | — | 状态/电压/速度 |
+| PID 控制 | ✅ 已完成 | — | Middleware/pid.c |
+| 运动学 | ✅ 已完成 | — | Middleware/kinematics.c |
+| 里程计 | ✅ 已完成 | — | Middleware/odometry.c |
 
 ## 调试开关 (CHASSIS_DEBUG)
 
