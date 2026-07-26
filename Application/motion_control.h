@@ -1,12 +1,12 @@
 /**
  * @file    motion_control.h
- * @brief   Motion controller — target velocity → motor PWM
+ * @brief   运动控制器：将目标速度转换为电机 PWM
  *
  * OWNER:  Team Member
  * STATUS: STUB — to be filled by team member
  *
- * Takes a chassis command (vx, wz), runs PID velocity control,
- * and outputs PWM to motors via Hardware/motor.h.
+ * 接收底盘命令（vx、wz），执行 PID 速度控制，
+ * 并通过 Hardware/motor.h 输出电机 PWM。
  *
  * Call flow:
  *   1. MotionControl_SetTarget() — set desired speed (called from state machine)
@@ -23,35 +23,35 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * Public Functions
+ * 公共函数
  * ======================================================================== */
 
 /**
- * @brief  Initialize motion controller
- * @note   Creates PID instances with defaults from pid_config.h
+ * @brief  初始化运动控制器
+ * @note   使用 pid_config.h 中的默认参数创建 PID 实例
  */
 void MotionControl_Init(void);
 
 /**
- * @brief  Set target chassis motion
- * @param  cmd  Desired motion (vx m/s, wz rad/s)
+ * @brief  设置目标底盘运动
+ * @param  cmd  期望运动（vx：m/s，wz：rad/s）
  *
- * Converts chassis command to per-wheel speed targets via
- * inverse kinematics, then feeds each wheel's target to a PID.
+ * 通过逆运动学将底盘命令转换为各轮速度目标，
+ * 再将每个车轮的目标值送入 PID。
  */
 void MotionControl_SetTarget(ChassisCmd_t cmd);
 
 /**
- * @brief  Run one control iteration (read encoder → PID → PWM)
+ * @brief  执行一次控制迭代（读取编码器、PID 计算、输出 PWM）
  * @note   Call at CONTROL_FREQ_HZ (200Hz) from timer ISR
  *
- * Reads current encoder velocity, computes incremental PI,
- * outputs PWM via Motor_SetPWM().
+ * 读取当前编码器速度，计算增量式 PI，
+ * 并通过 Motor_SetPWM() 输出 PWM。
  */
 void MotionControl_Update(void);
 
 /**
- * @brief  Emergency stop — reset PIDs and stop motors
+ * @brief  紧急停止：重置 PID 并停止电机
  */
 void MotionControl_Stop(void);
 

@@ -1,9 +1,9 @@
 /**
  * @file    motor.h
- * @brief   Motor PWM + direction control driver
+ * @brief   电机 PWM 与方向控制驱动
  *
- * Controls two DC motors via TIMA1 PWM (CCP0/CCP1)
- * with GPIO direction control (AIN1/AIN2, BIN1/BIN2).
+ * 通过 TIMA1 PWM（CCP0/CCP1）控制两个直流电机，
+ * 并使用 GPIO（AIN1/AIN2、BIN1/BIN2）控制方向。
  */
 
 #ifndef _MOTOR_H_
@@ -17,26 +17,26 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * Public Functions
+ * 公共函数
  * ======================================================================== */
 
 /**
- * @brief  Set left and right motor PWM + direction
- * @param  pwmL   Left motor PWM (-8000 ~ +8000, positive = forward)
- * @param  pwmR   Right motor PWM (-8000 ~ +8000, positive = forward)
+ * @brief  设置左右电机 PWM 与方向
+ * @param  pwmL   左电机 PWM（-8000 ~ +8000，正值为前进）
+ * @param  pwmR   右电机 PWM（-8000 ~ +8000，正值为前进）
  */
 void Motor_SetPWM(int16_t pwmL, int16_t pwmR);
 
-/* ---- Backward-compatible alias ---- */
+/* ---- 向后兼容的别名 ---- */
 void Set_PWM(int16_t pwmL, int16_t pwmR);
 
 /**
- * @brief  Stop both motors (coast)
+ * @brief  停止两个电机（滑行）
  */
 void Motor_Stop(void);
 
 /**
- * @brief  Brake both motors (short brake via GPIO)
+ * @brief  制动两个电机（通过 GPIO 短接制动）
  */
 void Motor_Brake(void);
 

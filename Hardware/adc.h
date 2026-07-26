@@ -1,9 +1,9 @@
 /**
  * @file    adc.h
- * @brief   Battery voltage ADC driver
+ * @brief   电池电压 ADC 驱动
  *
- * ADC1 CH0 (PA15), 12-bit resolution, VDDA reference (3.3V)
- * Voltage divider: 11:1 (measures up to 36.3V, typically 2S LiPo ~8.4V)
+ * ADC1 CH0（PA15），12 位分辨率，VDDA 参考电压（3.3V）。
+ * 分压比为 11:1（最大可测 36.3V，典型 2S 锂电池为约 8.4V）。
  */
 
 #ifndef _ADC_H_
@@ -16,18 +16,18 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * Public Functions
+ * 公共函数
  * ======================================================================== */
 
 /**
- * @brief  Read battery voltage
- * @return Battery voltage in volts (e.g., 8.4 for fully charged 2S LiPo)
+ * @brief  读取电池电压
+ * @return 电池电压（伏特；例如满电 2S 锂电池为 8.4）
  *
- * Calculation: Vbat = ADC_reading * 3.3V * voltage_divider / 4096
+ * 计算公式：Vbat = ADC_reading * 3.3V * voltage_divider / 4096
  */
 float Get_battery_volt(void);
 
-/** Alias for new API naming convention */
+/** 新接口命名约定的别名 */
 #define Batt_GetVoltage()  Get_battery_volt()
 
 #ifdef __cplusplus

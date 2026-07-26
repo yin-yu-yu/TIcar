@@ -1,11 +1,10 @@
 /**
  * @file    uart_bt.h
- * @brief   Bluetooth UART interface (UART1, 9600bps, DMA receive)
+ * @brief   蓝牙 UART 接口（UART1、9600bps、DMA 接收）
  *
- * Communicates with HC-05/HC-06 Bluetooth module for
- * smartphone APP remote control and parameter tuning.
+ * 与 HC-05/HC-06 蓝牙模块通信，用于手机 APP 遥控和参数调整。
  *
- * Hardware: UART1, PB6(TX), PB7(RX), DMA CH0
+ * 硬件：UART1、PB6（TX）、PB7（RX）、DMA CH0
  */
 
 #ifndef _UART_BT_H_
@@ -19,42 +18,42 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * Public Functions
+ * 公共函数
  * ======================================================================== */
 
 /**
- * @brief  Initialize Bluetooth UART + DMA reception
+ * @brief  初始化蓝牙 UART 和 DMA 接收
  */
 void BT_Init(void);
 
 /**
- * @brief  Check if new data has arrived via Bluetooth
- * @return true if unprocessed bytes are available
+ * @brief  检查是否有新的蓝牙数据到达
+ * @return 存在未处理字节时返回 true
  */
 bool BT_DataAvailable(void);
 
 /**
- * @brief  Read a single byte from Bluetooth buffer
- * @return Received byte (0 if buffer empty)
+ * @brief  从蓝牙缓冲区读取一个字节
+ * @return 接收到的字节（缓冲区为空时返回 0）
  */
 uint8_t BT_ReadByte(void);
 
 /**
- * @brief  Send raw bytes over Bluetooth
- * @param  data  Data buffer
- * @param  len   Number of bytes to send
+ * @brief  通过蓝牙发送原始字节
+ * @param  data  数据缓冲区
+ * @param  len   待发送字节数
  */
 void BT_SendBytes(const uint8_t *data, uint16_t len);
 
 /**
- * @brief  Send formatted string over Bluetooth (printf style)
- * @param  fmt  Format string
- * @param  ...  Variable arguments
+ * @brief  通过蓝牙发送格式化字符串（printf 风格）
+ * @param  fmt  格式字符串
+ * @param  ...  可变参数
  */
 void BT_Printf(const char *fmt, ...);
 
 /**
- * @brief  Configure DMA for next reception burst
+ * @brief  为下一次接收配置 DMA
  */
 void BT_DMAConfig(void);
 

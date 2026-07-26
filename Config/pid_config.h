@@ -1,9 +1,9 @@
 /**
  * @file    pid_config.h
- * @brief   PID controller parameter presets
+ * @brief   PID 控制器参数预设
  *
- * All PID gains and limits are centralized here.
- * These are DEFAULTS — can be overridden at runtime via Bluetooth APP.
+ * 所有 PID 增益与限幅参数均集中在此处。
+ * 以下为默认值，可在运行时通过蓝牙 APP 覆盖。
  */
 
 #ifndef _PID_CONFIG_H_
@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * 1. Velocity PID (speed control loop, 200Hz)
+ * 1. 速度 PID（200Hz 速度控制环）
  * ======================================================================== */
 #define VELOCITY_KP_DEFAULT     400.0f
 #define VELOCITY_KI_DEFAULT     400.0f
@@ -23,7 +23,7 @@ extern "C" {
 #define VELOCITY_OUT_MIN       -7800.0f
 
 /* ========================================================================
- * 2. Angle PID (turning / heading control)
+ * 2. 角度 PID（转向/航向控制）
  * ======================================================================== */
 #define ANGLE_KP_DEFAULT        50.0f
 #define ANGLE_KI_DEFAULT        0.0f
@@ -32,7 +32,7 @@ extern "C" {
 #define ANGLE_OUT_MIN          -3000.0f
 
 /* ========================================================================
- * 3. Line-Follow PID (position correction)
+ * 3. 循迹 PID（位置修正）
  * ======================================================================== */
 #define LINE_KP_DEFAULT         30.0f
 #define LINE_KI_DEFAULT         0.5f

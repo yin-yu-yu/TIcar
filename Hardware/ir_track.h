@@ -1,11 +1,11 @@
 /**
  * @file    ir_track.h
- * @brief   Infrared line tracking sensor driver (4-channel)
+ * @brief   红外循迹传感器驱动（四通道）
  *
- * Reads 4 IR reflectance sensors to detect line position.
- * Includes the line-following state machine.
+ * 读取四个红外反射传感器以检测线路位置。
+ * 包含循迹状态机。
  *
- * Hardware: 4 digital IR sensors (DH1 ~ DH4)
+ * 硬件：四个数字红外传感器（DH1 ~ DH4）
  */
 
 #ifndef _IR_TRACK_H_
@@ -19,52 +19,52 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * Sensor State Bit Definitions
+ * 传感器状态位定义
  * ======================================================================== */
 /* Bit mapping: DH1=bit3, DH2=bit2, DH3=bit1, DH4=bit0
  * Black line detected → bit = 1, White ground → bit = 0 */
-#define IR_SENSOR_ALL_WHITE     0x00    /* Cross / all white       */
-#define IR_SENSOR_ALL_BLACK     0x0F    /* All black / lost        */
-#define IR_SENSOR_STRAIGHT      0x09    /* DH1 + DH4 (on line)     */
+#define IR_SENSOR_ALL_WHITE     0x00    /* 路口/全白               */
+#define IR_SENSOR_ALL_BLACK     0x0F    /* 全黑/丢线               */
+#define IR_SENSOR_STRAIGHT      0x09    /* DH1 + DH4（在线上）     */
 
 /* ========================================================================
- * Public Functions
+ * 公共函数
  * ======================================================================== */
 
 /**
- * @brief  Read raw 4-channel sensor state
- * @return 4-bit value: bit3=DH1, bit2=DH2, bit1=DH3, bit0=DH4
+ * @brief  读取原始四通道传感器状态
+ * @return 4 位数值：bit3=DH1，bit2=DH2，bit1=DH3，bit0=DH4
  */
 uint8_t IR_GetSensorState(void);
 
 /**
- * @brief  Get line position error (for PID control)
- * @return Position error in mm (0 = centered, negative = left, positive = right)
+ * @brief  获取线路位置误差（供 PID 控制使用）
+ * @return 位置误差（mm；0 为居中，负值偏左，正值偏右）
  */
 float IR_GetPositionError(void);
 
 /**
- * @brief  Run one iteration of the line-following state machine
- * @note   Call this at CONTROL_FREQ_HZ (200Hz) from timer ISR
- *         Updates target motor speeds internally
+ * @brief  执行一次循迹状态机迭代
+ * @note   应在定时器中断中以 CONTROL_FREQ_HZ（200Hz）调用，
+ *         函数内部会更新电机目标速度
  */
 void IR_LineDetect_Update(void);
 
 /**
- * @brief  Set base cruising speed for line following
- * @param  speed_mmps  Speed in mm/s
+ * @brief  设置循迹基础巡航速度
+ * @param  speed_mmps  速度（mm/s）
  */
 void IR_SetBaseSpeed(float speed_mmps);
 
 /**
- * @brief  Get current desired turn differential
- * @return Turn differential angle
+ * @brief  获取当前期望转向差值
+ * @return 转向差角
  */
 float IR_GetTurnDiff(void);
 
 /**
- * @brief  Get the chassis command computed by the last IR_LineDetect_Update()
- * @return ChassisCmd_t (vx, wz) ready for MotionControl_SetTarget()
+ * @brief  获取上次 IR_LineDetect_Update() 计算的底盘命令
+ * @return 可直接传给 MotionControl_SetTarget() 的 ChassisCmd_t（vx、wz）
  *
  * This bridges the Hardware→Application gap cleanly:
  * IR_LineDetect_Update() computes the command internally,
@@ -72,13 +72,13 @@ float IR_GetTurnDiff(void);
  */
 ChassisCmd_t IR_GetLineFollowCmd(void);
 
-/* ---- Extern global state (debug/display use) ---- */
+/* ---- 外部全局状态（供调试/显示使用） ---- */
 extern uint32_t ir_dh1_state;
 extern uint32_t ir_dh2_state;
 extern uint32_t ir_dh3_state;
 extern uint32_t ir_dh4_state;
 
-/* ---- Extern line-follow parameters (BT APP tunable) ---- */
+/* ---- 外部循迹参数（可由蓝牙 APP 调整） ---- */
 extern float Turn90Angle;
 extern float TurnMaxAngle;
 extern float TurnMidAngle;

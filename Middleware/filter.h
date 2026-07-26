@@ -1,9 +1,8 @@
 /**
  * @file    filter.h
- * @brief   Signal processing filters
+ * @brief   信号处理滤波器
  *
- * Utilities: complementary filter, low-pass filter,
- * moving average, limit/rate limiter.
+ * 提供互补滤波、低通滤波、移动平均、限幅和速率限制功能。
  */
 
 #ifndef _FILTER_H_
@@ -16,32 +15,32 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * Public Functions
+ * 公共函数
  * ======================================================================== */
 
 /**
- * @brief  First-order low-pass filter
- * @param  input    Current input sample
- * @param  prev     Previous filtered output (updated in place)
- * @param  alpha    Smoothing factor (0~1, smaller = smoother)
- * @return Filtered output
+ * @brief  一阶低通滤波器
+ * @param  input    当前输入采样值
+ * @param  prev     上次滤波输出（会原地更新）
+ * @param  alpha    平滑系数（0~1，越小越平滑）
+ * @return 滤波后的输出
  */
 float Filter_LowPass(float input, float *prev, float alpha);
 
 /**
- * @brief  Complementary filter for angle fusion
- * @param  accel_angle   Angle from accelerometer (noisy, no drift)
- * @param  gyro_rate     Angular rate from gyro (deg/s)
- * @param  dt            Time delta (seconds)
- * @param  alpha         Trust factor: accel weight (0~1, typically 0.02)
- * @param  fused_angle   Previous fused angle (updated in place)
- * @return Fused angle
+ * @brief  用于角度融合的互补滤波器
+ * @param  accel_angle   加速度计角度（有噪声、无漂移）
+ * @param  gyro_rate     陀螺仪角速度（deg/s）
+ * @param  dt            时间间隔（秒）
+ * @param  alpha         置信系数：加速度计权重（0~1，通常为 0.02）
+ * @param  fused_angle   上次融合角度（会原地更新）
+ * @return 融合后的角度
  */
 float Filter_Complementary(float accel_angle, float gyro_rate, float dt,
                            float alpha, float *fused_angle);
 
 /**
- * @brief  Rate limiter — limit how fast a value can change
+ * @brief  速率限制器：限制数值的变化速度
  * @param  target      Desired value
  * @param  current     Current value
  * @param  max_rate    Maximum rate of change per second
@@ -51,7 +50,7 @@ float Filter_Complementary(float accel_angle, float gyro_rate, float dt,
 float Filter_RateLimit(float target, float current, float max_rate, float dt);
 
 /**
- * @brief  Simple dead-zone filter
+ * @brief  简单死区滤波器
  * @param  value    Input value
  * @param  zone     Dead zone threshold (|value| < zone → 0)
  * @return Filtered value

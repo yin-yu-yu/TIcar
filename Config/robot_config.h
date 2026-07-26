@@ -1,11 +1,11 @@
 /**
  * @file    robot_config.h
- * @brief   Robot mechanical parameters and physical constants
+ * @brief   机器人机械参数与物理常量
  *
- * ALL tunable robot parameters are centralized here.
- * No magic numbers scattered in source files.
+ * 所有可调机器人参数均集中在此处。
+ * 源文件中不得散落未经定义的常量。
  *
- * Usage: #include "robot_config.h"
+ * 用法：#include "robot_config.h"
  */
 
 #ifndef _ROBOT_CONFIG_H_
@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * 1. Chassis Type
+ * 1. 底盘类型
  * ======================================================================== */
 typedef enum {
     CHASSIS_MECANUM      = 0,
@@ -30,50 +30,50 @@ typedef enum {
 #define CHASSIS_TYPE    CHASSIS_DIFFERENTIAL
 
 /* ========================================================================
- * 2. Wheel & Mechanical Parameters
+ * 2. 车轮与机械参数
  * ======================================================================== */
-#define WHEEL_DIAMETER_MM       65.0f       /* Wheel diameter (mm)              */
-#define WHEEL_PERIMETER_M       0.2042f     /* Wheel perimeter (m)              */
-#define WHEEL_SPACING_M         0.1610f     /* Distance between two wheels (m)  */
-#define MOTOR_GEAR_RATIO        28.0f       /* Motor gearbox reduction ratio    */
-#define ENCODER_PPR             13.0f       /* Encoder pulses per revolution    */
-#define ENCODER_MULTIPLES       2           /* Encoder quadrature multiplier    */
+#define WHEEL_DIAMETER_MM       65.0f       /* 车轮直径（mm）                    */
+#define WHEEL_PERIMETER_M       0.2042f     /* 车轮周长（m）                     */
+#define WHEEL_SPACING_M         0.1610f     /* 两轮间距（m）                     */
+#define MOTOR_GEAR_RATIO        28.0f       /* 电机减速箱减速比                  */
+#define ENCODER_PPR             13.0f       /* 编码器每转脉冲数                  */
+#define ENCODER_MULTIPLES       2           /* 编码器正交倍频系数                */
 
 /* ========================================================================
- * 3. Motion Limits
+ * 3. 运动限制
  * ======================================================================== */
-#define MAX_LINEAR_SPEED_MPS    0.5f        /* Max forward/backward speed (m/s) */
-#define MAX_ANGULAR_SPEED_RPS   1.5f        /* Max angular speed (rad/s)        */
-#define TURN_RADIUS_MIN_M       0.3f        /* Min turning radius (caster limitation) */
+#define MAX_LINEAR_SPEED_MPS    0.5f        /* 最大前进/后退速度（m/s）          */
+#define MAX_ANGULAR_SPEED_RPS   1.5f        /* 最大角速度（rad/s）               */
+#define TURN_RADIUS_MIN_M       0.3f        /* 最小转弯半径（受万向轮限制）      */
 
 /* ========================================================================
- * 4. PWM Parameters
+ * 4. PWM 参数
  * ======================================================================== */
-#define PWM_PERIOD              8000        /* Timer period for PWM             */
-#define PWM_MAX                 8000        /* Max PWM duty value               */
-#define PWM_DEAD_ZONE           0           /* Motor dead zone (0 = none)       */
+#define PWM_PERIOD              8000        /* PWM 定时器周期                   */
+#define PWM_MAX                 8000        /* 最大 PWM 占空比数值              */
+#define PWM_DEAD_ZONE           0           /* 电机死区（0 表示无死区）          */
 
 /* ========================================================================
- * 5. Control Loop
+ * 5. 控制循环
  * ======================================================================== */
-#define CONTROL_FREQ_HZ         200         /* Main control loop frequency      */
+#define CONTROL_FREQ_HZ         200         /* 主控制循环频率                   */
 #define CONTROL_PERIOD_MS       5           /* 1000 / CONTROL_FREQ_HZ           */
-#define CONTROL_DT_S            0.005f      /* Control period in seconds        */
+#define CONTROL_DT_S            0.005f      /* 控制周期（秒）                   */
 
 /* ========================================================================
- * 6. Battery Monitoring
+ * 6. 电池监测
  * ======================================================================== */
-#define BATT_VOLTAGE_DIVIDER     11.0f      /* ADC voltage divider ratio        */
-#define BATT_ADC_REF_V           3.3f       /* ADC reference voltage            */
-#define BATT_ADC_RESOLUTION      4096.0f    /* 12-bit ADC                       */
-#define BATT_WARN_THRESHOLD_V    7.0f       /* Low battery warning (V)          */
-#define BATT_CRITICAL_THRESHOLD_V 6.5f      /* Critical low battery (V)         */
-#define BATT_FULL_V              8.4f       /* Full battery voltage (2S LiPo)   */
+#define BATT_VOLTAGE_DIVIDER     11.0f      /* ADC 分压比                       */
+#define BATT_ADC_REF_V           3.3f       /* ADC 参考电压                     */
+#define BATT_ADC_RESOLUTION      4096.0f    /* 12 位 ADC                        */
+#define BATT_WARN_THRESHOLD_V    7.0f       /* 低电量警告阈值（V）              */
+#define BATT_CRITICAL_THRESHOLD_V 6.5f      /* 严重低电量阈值（V）              */
+#define BATT_FULL_V              8.4f       /* 满电电压（2S 锂电池）            */
 
 /* ========================================================================
- * 7. IR Tracking Sensor
+ * 7. 红外循迹传感器
  * ======================================================================== */
-#define IR_SENSOR_COUNT          4          /* Number of IR tracking sensors    */
+#define IR_SENSOR_COUNT          4          /* 红外循迹传感器数量                */
 
 #ifdef __cplusplus
 }

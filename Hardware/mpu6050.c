@@ -1,24 +1,24 @@
 /**
  * @file    mpu6050.c
- * @brief   MPU6050 6-axis IMU driver with Mahony AHRS attitude estimation
+ * @brief   带 Mahony AHRS 姿态解算的 MPU6050 六轴 IMU 驱动
  *
- * Ported from: WHEELTEC_C07A_BalanceCar/BSP/bsp_mpu6050.c
+ * 移植自：WHEELTEC_C07A_BalanceCar/BSP/bsp_mpu6050.c
  *
- * Hardware: MPU6050 (3-axis gyro + 3-axis accelerometer)
- * Interface: Software I2C via bsp_siic.h (SDA=PA0, SCL=PA1)
+ * 硬件：MPU6050（三轴陀螺仪 + 三轴加速度计）
+ * 接口：通过 bsp_siic.h 使用软件 I2C（SDA=PA0，SCL=PA1）
  *
- * Register configuration:
+ * 寄存器配置：
  *   - Gyro:    ±2000 dps  (scale 16.4 LSB/dps)
  *   - Accel:   ±2g        (scale 16384 LSB/g, output in g units per API)
  *   - DLPF:    CFG=3, ~44 Hz bandwidth (closest to target 42/44 Hz)
  *   - Sample:  SMPLRT_DIV=4 → 1kHz / (1+4) = 200 Hz
  *
- * Timing budget (80 MHz Cortex-M0+, no FPU):
+ * 时间预算（80 MHz Cortex-M0+，无 FPU）：
  *   - Software I2C 14-byte read:         ~350–500 µs
  *   - Mahony AHRS (quaternion + 3 trig): ~600–1100 µs
  *   - Total worst-case per iteration:    ~1600 µs < 5000 µs ✓
  *
- * API (see mpu6050.h):
+ * API（见 mpu6050.h）：
  *   MPU6050_Init()        — Initialize I2C + configure MPU6050 registers
  *   MPU6050_DataReady()   — Check if new data available since last read
  *   MPU6050_Read()        — Read gyro(deg/s), accel(g), angle(deg) all at once
@@ -27,7 +27,7 @@
  *   MPU6050_GetRoll()     — Get roll angle (deg)
  *   MPU6050_GetGyroZ()    — Get Z-axis angular velocity (deg/s)
  *
- * Call flow (200 Hz, from TIMER ISR or main loop):
+ * 调用流程（200Hz，来自定时器中断或主循环）：
  *   1. mpu6050_read_raw()     — Read 14 bytes via I2C
  *   2. mpu6050_update_ahrs()  — Mahony AHRS → roll/pitch/yaw
  *   3. MPU6050_GetYaw() etc.  — Read the latest angles
@@ -39,7 +39,7 @@
 #include <math.h>
 
 /* ========================================================================
- * MPU6050 Register Addresses (from reference bsp_mpu6050.h)
+ * MPU6050 寄存器地址（来自参考实现 bsp_mpu6050.h）
  * ======================================================================== */
 #define MPU6050_DEV              0x68
 #define MPU6050_RA_SMPLRT_DIV    0x19
@@ -56,7 +56,7 @@
 #define MPU6050_RA_WHO_AM_I      0x75
 
 /* ========================================================================
- * Internal Data Structures
+ * 内部数据结构
  * ======================================================================== */
 
 typedef struct {
@@ -64,36 +64,36 @@ typedef struct {
 } imu_val_t;
 
 typedef struct {
-    imu_val_t gyro;    /* Angular velocity (rad/s) */
-    imu_val_t accel;   /* Linear acceleration (m/s^2) */
-    float     roll;    /* Roll angle (deg) */
-    float     pitch;   /* Pitch angle (deg) */
-    float     yaw;     /* Yaw angle (deg) */
+    imu_val_t gyro;    /* 角速度（rad/s） */
+    imu_val_t accel;   /* 线加速度（m/s^2） */
+    float     roll;    /* 横滚角（deg） */
+    float     pitch;   /* 俯仰角（deg） */
+    float     yaw;     /* 偏航角（deg） */
 } Imu_t;
 
 /* ========================================================================
- * Module State
+ * 模块状态
  * ======================================================================== */
 static Imu_t g_mpu6050;
 static bool  g_initialized = false;
-static bool  g_data_ready  = false;   /* Set after each successful read */
+static bool  g_data_ready  = false;   /* 每次成功读取后置位 */
 
-/* ---- Conversion constants ---- */
+/* ---- 换算常量 ---- */
 #define GYRO_SCALE_FACTOR    (0.060975609756f)   /* 1/16.4: LSB → °/s for ±2000dps     */
 #define ACCEL_SCALE_FACTOR   (1.0f / 16384.0f)   /* 1/16384: LSB → g for ±2g           */
 #define DEG_TO_RAD           (0.01745329252f)     /* π/180                               */
 
-/* ---- Mahony AHRS constants ---- */
-#define AHRS_KP              (0.8f)      /* Proportional gain              */
-#define AHRS_KI              (0.0001f)   /* Integral gain                  */
+/* ---- Mahony AHRS 常量 ---- */
+#define AHRS_KP              (0.8f)      /* 比例增益                        */
+#define AHRS_KI              (0.0001f)   /* 积分增益                        */
 #define AHRS_HALF_T          (0.0025f)   /* 0.5 * dt (dt = 0.005s @200Hz) */
 
 /* ========================================================================
- * Static Helpers
+ * 静态辅助函数
  * ======================================================================== */
 
 /**
- * @brief  Fast inverse square root (Quake 3 algorithm)
+ * @brief  快速平方根倒数（Quake 3 算法）
  */
 static float Q_rsqrt(float number)
 {
@@ -111,13 +111,12 @@ static float Q_rsqrt(float number)
 }
 
 /**
- * @brief  Mahony AHRS — quaternion-based attitude update
+ * @brief  Mahony AHRS：基于四元数的姿态更新
  *
- * Fuses gyroscope and accelerometer data into roll/pitch/yaw.
- * Uses proportional-integral feedback to correct gyro drift
- * from the gravity vector measured by the accelerometer.
+ * 将陀螺仪和加速度计数据融合为横滚、俯仰和偏航角。
+ * 使用比例积分反馈，依据加速度计测得的重力向量修正陀螺仪漂移。
  *
- * @param imu  Pointer to Imu_t (reads gyro/accel, writes roll/pitch/yaw)
+ * @param imu  Imu_t 指针（读取陀螺仪/加速度计并写入姿态角）
  */
 static void mpu6050_update_ahrs(Imu_t *imu)
 {
@@ -128,7 +127,7 @@ static void mpu6050_update_ahrs(Imu_t *imu)
     float vx, vy, vz;
     float ex, ey, ez;
 
-    /* ---- Get sensor readings ---- */
+    /* ---- 获取传感器读数 ---- */
     float gx = imu->gyro.x;
     float gy = imu->gyro.y;
     float gz = imu->gyro.z;
@@ -136,7 +135,7 @@ static void mpu6050_update_ahrs(Imu_t *imu)
     float ay = imu->accel.y;
     float az = imu->accel.z;
 
-    /* ---- Pre-compute quaternion products ---- */
+    /* ---- 预计算四元数乘积 ---- */
     float q0q0 = q0 * q0;
     float q0q1 = q0 * q1;
     float q0q2 = q0 * q2;
@@ -148,12 +147,12 @@ static void mpu6050_update_ahrs(Imu_t *imu)
     float q2q3 = q2 * q3;
     float q3q3 = q3 * q3;
 
-    /* ---- Extract gravity vector from quaternion ---- */
+    /* ---- 从四元数提取重力向量 ---- */
     vx = 2.0f * (q1q3 - q0q2);
     vy = 2.0f * (q0q1 + q2q3);
     vz = 1.0f - 2.0f * (q1q1 + q2q2);
 
-    /* ---- Normalize accelerometer ---- */
+    /* ---- 归一化加速度计数据 ---- */
     norm = Q_rsqrt(ax * ax + ay * ay + az * az);
     ax *= norm;
     ay *= norm;
@@ -164,7 +163,7 @@ static void mpu6050_update_ahrs(Imu_t *imu)
     ey = az * vx - ax * vz;
     ez = ax * vy - ay * vx;
 
-    /* ---- PI correction on gyro bias ---- */
+    /* ---- 对陀螺仪偏差进行 PI 修正 ---- */
     eInt[0] += ex;
     eInt[1] += ey;
     eInt[2] += ez;
@@ -173,13 +172,13 @@ static void mpu6050_update_ahrs(Imu_t *imu)
     gy += AHRS_KP * ey + AHRS_KI * eInt[1];
     gz += AHRS_KP * ez + AHRS_KI * eInt[2];
 
-    /* ---- Quaternion integration (first-order) ---- */
+    /* ---- 四元数积分（一阶） ---- */
     q0 += (-q1 * gx - q2 * gy - q3 * gz) * AHRS_HALF_T;
     q1 += ( q0 * gx + q2 * gz - q3 * gy) * AHRS_HALF_T;
     q2 += ( q0 * gy - q1 * gz + q3 * gx) * AHRS_HALF_T;
     q3 += ( q0 * gz + q1 * gy - q2 * gx) * AHRS_HALF_T;
 
-    /* ---- Normalize quaternion ---- */
+    /* ---- 归一化四元数 ---- */
     norm = Q_rsqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
     q0 *= norm;
     q1 *= norm;
@@ -195,10 +194,10 @@ static void mpu6050_update_ahrs(Imu_t *imu)
 }
 
 /**
- * @brief  Read raw accelerometer + gyro data from MPU6050 via I2C
- * @return true on success, false on I2C error
+ * @brief  通过 I2C 从 MPU6050 读取原始加速度计和陀螺仪数据
+ * @return 成功时返回 true，I2C 出错时返回 false
  *
- * Reads 14 bytes starting from ACCEL_XOUT_H:
+ * 从 ACCEL_XOUT_H 开始读取 14 字节：
  *   [0-1] ACCEL_X,  [2-3] ACCEL_Y,  [4-5] ACCEL_Z
  *   [6-7] TEMP,     [8-9] GYRO_X,   [10-11] GYRO_Y,  [12-13] GYRO_Z
  */
@@ -216,7 +215,7 @@ static bool mpu6050_read_raw(void)
         return false;
     }
 
-    /* ---- Parse raw data (big-endian) ---- */
+    /* ---- 解析原始数据（大端序） ---- */
     g_mpu6050.accel.x = (float)((int16_t)((buf[0] << 8) | buf[1]));
     g_mpu6050.accel.y = (float)((int16_t)((buf[2] << 8) | buf[3]));
     g_mpu6050.accel.z = (float)((int16_t)((buf[4] << 8) | buf[5]));
@@ -241,19 +240,19 @@ static bool mpu6050_read_raw(void)
 }
 
 /* ========================================================================
- * Public Functions — API matching mpu6050.h
+ * 公共函数：与 mpu6050.h 中的 API 对应
  * ======================================================================== */
 
 /**
- * @brief  Initialize MPU6050 and configure for 200Hz operation
+ * @brief  初始化 MPU6050 并配置为 200Hz 运行
  *
- * Steps:
- *   1. Verify device presence (WHO_AM_I == 0x68)
- *   2. Reset MPU6050
- *   3. Wake up, set gyro X-axis as PLL clock source
+ * 步骤：
+ *   1. 验证设备存在（WHO_AM_I == 0x68）
+ *   2. 复位 MPU6050
+ *   3. 唤醒设备，并将陀螺仪 X 轴作为 PLL 时钟源
  *   4. Configure gyro ±2000dps, accel ±2g
- *   5. Set DLPF bandwidth 42Hz, sample rate 200Hz
- *   6. Disable interrupts and FIFO
+ *   5. 设置 DLPF 带宽为 42Hz、采样率为 200Hz
+ *   6. 禁用中断和 FIFO
  */
 void MPU6050_Init(void)
 {
@@ -264,10 +263,10 @@ void MPU6050_Init(void)
     uint8_t iobuf;
     IIC_Status_t check_state = IIC_OK;
 
-    /* Init software I2C */
+    /* 初始化软件 I2C */
     iic->init();
 
-    /* ---- Check device presence ---- */
+    /* ---- 检查设备是否存在 ---- */
     iobuf = 0;
     check_state += iic->read_reg((uint16_t)(MPU6050_DEV << 1),
                                  MPU6050_RA_WHO_AM_I, &iobuf, 1, 500);
@@ -276,20 +275,20 @@ void MPU6050_Init(void)
         return;
     }
 
-    /* ---- Reset MPU6050 ---- */
+    /* ---- 复位 MPU6050 ---- */
     iobuf = (uint8_t)(1 << 7);
     check_state += iic->write_reg((uint16_t)(MPU6050_DEV << 1),
                                   MPU6050_RA_PWR_MGMT_1, &iobuf, 1, 500);
 
-    /* Wait for reset to complete */
+    /* 等待复位完成 */
     iic->delay_ms(200);
 
-    /* ---- Wake up, set gyro X as PLL clock ---- */
+    /* ---- 唤醒并将陀螺仪 X 轴设为 PLL 时钟源 ---- */
     iobuf = (uint8_t)(1 << 0);
     check_state += iic->write_reg((uint16_t)(MPU6050_DEV << 1),
                                   MPU6050_RA_PWR_MGMT_1, &iobuf, 1, 500);
 
-    /* ---- Enable both accel and gyro (disable low-power) ---- */
+    /* ---- 启用加速度计和陀螺仪（禁用低功耗模式） ---- */
     iobuf = 0;
     check_state += iic->write_reg((uint16_t)(MPU6050_DEV << 1),
                                   MPU6050_RA_PWR_MGMT_2, &iobuf, 1, 500);
@@ -314,22 +313,22 @@ void MPU6050_Init(void)
     check_state += iic->write_reg((uint16_t)(MPU6050_DEV << 1),
                                   MPU6050_RA_SMPLRT_DIV, &iobuf, 1, 500);
 
-    /* ---- Disable interrupts ---- */
+    /* ---- 禁用中断 ---- */
     iobuf = 0;
     check_state += iic->write_reg((uint16_t)(MPU6050_DEV << 1),
                                   MPU6050_RA_INT_ENABLE, &iobuf, 1, 500);
 
-    /* ---- Disable FIFO ---- */
+    /* ---- 禁用 FIFO ---- */
     iobuf = 0;
     check_state += iic->write_reg((uint16_t)(MPU6050_DEV << 1),
                                   MPU6050_RA_FIFO_EN, &iobuf, 1, 500);
 
-    /* ---- Disable I2C master, FIFO; enable I2C interface ---- */
+    /* ---- 禁用 I2C 主机和 FIFO，启用 I2C 接口 ---- */
     iobuf = 0;
     check_state += iic->write_reg((uint16_t)(MPU6050_DEV << 1),
                                   MPU6050_RA_USER_CTRL, &iobuf, 1, 500);
 
-    /* ---- Enable I2C bypass mode ---- */
+    /* ---- 启用 I2C 旁路模式 ---- */
     iobuf = (uint8_t)(1 << 1);
     check_state += iic->write_reg((uint16_t)(MPU6050_DEV << 1),
                                   MPU6050_RA_INT_PIN_CFG, &iobuf, 1, 500);
@@ -340,8 +339,8 @@ void MPU6050_Init(void)
 }
 
 /**
- * @brief  Check if new MPU6050 data is available
- * @return true after a successful mpu6050_read_raw() call
+ * @brief  检查是否有新的 MPU6050 数据可用
+ * @return mpu6050_read_raw() 成功调用后返回 true
  */
 bool MPU6050_DataReady(void)
 {
@@ -349,18 +348,18 @@ bool MPU6050_DataReady(void)
 }
 
 /**
- * @brief  Read all MPU6050 data: gyro, accel, and Euler angles
+ * @brief  读取全部 MPU6050 数据：陀螺仪、加速度计和欧拉角
  *
- * Performs a complete read cycle:
- *   1. Read raw sensor registers via I2C
- *   2. Run Mahony AHRS to update roll/pitch/yaw
- *   3. Copy results to output arrays
+ * 执行完整读取周期：
+ *   1. 通过 I2C 读取原始传感器寄存器
+ *   2. 运行 Mahony AHRS 更新姿态角
+ *   3. 将结果复制到输出数组
  *
  * @param  gyro   [out] Gyroscope (deg/s): [gx, gy, gz] or NULL
  * @param  accel  [out] Accelerometer (g): [ax, ay, az] or NULL
  * @param  angle  [out] Euler angles (deg): [roll, pitch, yaw] or NULL
  *
- * @note   Call at CONTROL_FREQ_HZ (200Hz) for best results
+ * @note   建议以 CONTROL_FREQ_HZ（200Hz）调用以获得最佳效果
  */
 void MPU6050_Read(float gyro[3], float accel[3], float angle[3])
 {
@@ -371,7 +370,7 @@ void MPU6050_Read(float gyro[3], float accel[3], float angle[3])
         return;
     }
 
-    /* Read raw sensor data via I2C */
+    /* 通过 I2C 读取原始传感器数据 */
     if (!mpu6050_read_raw()) {
         g_data_ready = false;
         if (gyro)  { gyro[0] = 0.0f;  gyro[1] = 0.0f;  gyro[2] = 0.0f; }
@@ -380,10 +379,10 @@ void MPU6050_Read(float gyro[3], float accel[3], float angle[3])
         return;
     }
 
-    /* Update attitude via Mahony AHRS */
+    /* 通过 Mahony AHRS 更新姿态 */
     mpu6050_update_ahrs(&g_mpu6050);
 
-    /* Copy to output arrays */
+    /* 复制到输出数组 */
     if (gyro) {
         gyro[0] = g_mpu6050.gyro.x / DEG_TO_RAD;    /* rad/s → deg/s */
         gyro[1] = g_mpu6050.gyro.y / DEG_TO_RAD;
@@ -403,7 +402,7 @@ void MPU6050_Read(float gyro[3], float accel[3], float angle[3])
     g_data_ready = true;
 }
 
-/* ---- Individual accessors ---- */
+/* ---- 单项访问器 ---- */
 
 float MPU6050_GetYaw(void)
 {
@@ -422,6 +421,6 @@ float MPU6050_GetRoll(void)
 
 float MPU6050_GetGyroZ(void)
 {
-    /* Return Z-axis gyro in deg/s */
+    /* 返回 Z 轴陀螺仪角速度（deg/s） */
     return g_mpu6050.gyro.z / DEG_TO_RAD;
 }

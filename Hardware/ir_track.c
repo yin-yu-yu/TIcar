@@ -1,19 +1,19 @@
 /**
  * @file    ir_track.c
- * @brief   Infrared line tracking sensor driver (4-channel)
+ * @brief   红外循迹传感器驱动（四通道）
  *
- * Implements the API declared in ir_track.h:
- *   - Raw sensor reading (GPIO)
- *   - Sensor state classification (cross, left/right turns, straight, lost)
- *   - Line-following state machine (migrated from IR_Module.c IRDM_line_inspection)
+ * 实现 ir_track.h 中声明的接口：
+ *   - 原始传感器读取（GPIO）
+ *   - 传感器状态分类（路口、左右转、直行、丢线）
+ *   - 循迹状态机（从 IR_Module.c 的 IRDM_line_inspection 迁移）
  *
- * Hardware: 4 digital IR sensors (DH1 ~ DH4)
+ * 硬件：四个数字红外传感器（DH1 ~ DH4）
  *   - DH1: PA27  (bit3)
  *   - DH2: PA12  (bit2)
  *   - DH3: PB16  (bit1)
  *   - DH4: PB17  (bit0)
  *
- * Layer: Hardware — only calls GPIO drivers + Middleware (kinematics)
+ * 层级：硬件层，仅调用 GPIO 驱动和中间件（运动学）。
  */
 
 #include "ir_track.h"
@@ -23,7 +23,7 @@
 #include <math.h>
 
 /* ========================================================================
- * Module Variables — sensor state (for display/external access)
+ * 模块变量：传感器状态（供显示/外部访问）
  * ======================================================================== */
 uint32_t ir_dh1_state;
 uint32_t ir_dh2_state;
@@ -31,13 +31,13 @@ uint32_t ir_dh3_state;
 uint32_t ir_dh4_state;
 
 /* ========================================================================
- * Line-Follow State Machine Variables
+ * 循迹状态机变量
  * ======================================================================== */
-static float g_base_speed = 0.15f;       /* Base speed in mm/s (for compat), actually m/s */
-static float g_turn_diff  = 0.0f;        /* Current turn differential */
-static int   g_last_state = 0;           /* Previous sensor state for lost-line recovery */
-static int   g_turn_cnt   = 0;           /* Turn counter for 90-degree handling */
-static int   g_saved_state = 0;          /* Saved turn state during countdown */
+static float g_base_speed = 0.15f;       /* 基础速度（为兼容保留 mm/s 命名，实际单位为 m/s） */
+static float g_turn_diff  = 0.0f;        /* 当前转向差值 */
+static int   g_last_state = 0;           /* 用于丢线恢复的上次传感器状态 */
+static int   g_turn_cnt   = 0;           /* 90 度转向处理计数器 */
+static int   g_saved_state = 0;          /* 倒计时期间保存的转向状态 */
 
 /* ---- Tunable parameters — defined in IR_Module.c during migration
  *     (will move here when legacy code is removed) ---- */
@@ -48,17 +48,17 @@ extern float TurnMinAngle;
 extern float BaseSpeed;      /* mm/s */
 extern float ForwardLimit;
 
-/* ---- Output: target chassis command (read by Application/motion_control) ---- */
+/* ---- 输出：目标底盘命令（由 Application/motion_control 读取） ---- */
 static ChassisCmd_t g_linefollow_cmd;
 
 /* ========================================================================
- * Public Functions — Raw Sensor
+ * 公共函数：原始传感器
  * ======================================================================== */
 
 /**
- * @brief  Read 4 IR sensor GPIOs and pack into a 4-bit state
- * @return 4-bit: bit3=DH1, bit2=DH2, bit1=DH3, bit0=DH4
- *         1 = black line detected, 0 = white ground
+ * @brief  读取四个红外传感器 GPIO 并组装为 4 位状态值
+ * @return 4 位数：bit3=DH1，bit2=DH2，bit1=DH3，bit0=DH4
+ *         1 表示检测到黑线，0 表示白色地面
  */
 uint8_t IR_GetSensorState(void)
 {
@@ -72,16 +72,15 @@ uint8_t IR_GetSensorState(void)
 }
 
 /**
- * @brief  Convert sensor state to position error in mm
- * @return Position error: 0=centered, negative=left deviation, positive=right
+ * @brief  将传感器状态转换为毫米单位的位置误差
+ * @return 位置误差：0 为居中，负值为左偏，正值为右偏
  *
- * Weighted sum of sensor positions. DH1/DH4 are the outer sensors,
- * DH2/DH3 are inner. Each sensor has a weight proportional to its
- * distance from the centerline.
+ * 对传感器位置进行加权求和。DH1/DH4 为外侧传感器，DH2/DH3 为内侧
+ * 传感器；每个传感器的权重与其距中心线的距离成正比。
  */
 float IR_GetPositionError(void)
 {
-    /* Read current sensor state */
+    /* 读取当前传感器状态 */
     uint8_t state = IR_GetSensorState();
 
     /* Weight lookup: assume sensors spaced evenly across sensor bar.
@@ -94,7 +93,7 @@ float IR_GetPositionError(void)
     if (state & 0x02) { error += 10.0f; count++; }  /* DH3: near right*/
     if (state & 0x01) { error += 30.0f; count++; }  /* DH4: far right */
 
-    /* Average over active sensors */
+    /* 对已激活传感器求平均值 */
     if (count > 0) {
         error /= (float)count;
     }
@@ -103,12 +102,12 @@ float IR_GetPositionError(void)
 }
 
 /* ========================================================================
- * Public Functions — Line-Follow State Machine
+ * 公共函数：循迹状态机
  * ======================================================================== */
 
 /**
- * @brief  Set base cruising speed for line following
- * @param  speed_mmps  Speed in mm/s (internally converted to m/s)
+ * @brief  设置循迹基础巡航速度
+ * @param  speed_mmps  速度（mm/s，内部转换为 m/s）
  */
 void IR_SetBaseSpeed(float speed_mmps)
 {
@@ -119,8 +118,8 @@ void IR_SetBaseSpeed(float speed_mmps)
 }
 
 /**
- * @brief  Get current turn differential
- * @return Turn differential (degree-equivalent, positive = turn left)
+ * @brief  获取当前转向差值
+ * @return 转向差值（等效角度，正值表示左转）
  */
 float IR_GetTurnDiff(void)
 {
@@ -128,22 +127,22 @@ float IR_GetTurnDiff(void)
 }
 
 /**
- * @brief  Run one iteration of the line-following state machine
- * @note   Call at CONTROL_FREQ_HZ (200Hz) from timer ISR
+ * @brief  执行一次循迹状态机迭代
+ * @note   应在定时器中断中以 CONTROL_FREQ_HZ（200Hz）调用
  *
- * Migrated from IR_Module.c IRDM_line_inspection().
- * Classifies 4-bit sensor state and computes chassis motion command.
+ * 从 IR_Module.c 的 IRDM_line_inspection() 迁移而来。
+ * 对四位传感器状态分类并计算底盘运动命令。
  *
- * The resulting ChassisCmd_t is stored globally for
- * Application/motion_control.c to pick up via LineFollow_ComputeCorrection().
+ * 计算得到的 ChassisCmd_t 保存在全局变量中，供
+ * Application/motion_control.c 通过 LineFollow_ComputeCorrection() 获取。
  *
- * Classification:
- *   0x00 = Cross (all white)
- *   0x01 = Left 90° A      0x03 = Left 90° B
- *   0x08 = Right 90° A     0x0C = Right 90° B
- *   0x07 = Left Big        0x0E = Right Big
- *   0x0B = Left Small      0x0D = Right Small
- *   0x09 = Straight        0x0F = Lost (all black)
+ * 分类：
+ *   0x00 = 路口（全白）
+ *   0x01 = 左 90° A       0x03 = 左 90° B
+ *   0x08 = 右 90° A       0x0C = 右 90° B
+ *   0x07 = 左大转弯        0x0E = 右大转弯
+ *   0x0B = 左小转弯        0x0D = 右小转弯
+ *   0x09 = 直行            0x0F = 丢线（全黑）
  */
 void IR_LineDetect_Update(void)
 {
@@ -223,12 +222,12 @@ void IR_LineDetect_Update(void)
             break;
     }
 
-    /* Remember state for lost-line recovery */
+    /* 记录状态，供丢线恢复使用 */
     if (sensor_state != 0x0F) {
         g_last_state = sensor_state;
     }
 
-    /* ---- Compute base speed: sharper turn → slower speed ---- */
+    /* ---- 计算基础速度：转弯越急，速度越低 ---- */
     if (fabsf(g_turn_diff) < ForwardLimit) {
         base_speed_mm = BaseSpeed * (1.0f - fabsf(g_turn_diff) / ForwardLimit);
         if (base_speed_mm < 0.0f) base_speed_mm = 0.0f;
@@ -243,7 +242,7 @@ void IR_LineDetect_Update(void)
     left_motor_speed  = 0.001f * (base_speed_mm - g_turn_diff);
     right_motor_speed = 0.001f * (base_speed_mm + g_turn_diff);
 
-    /* ---- Clamp individual wheel speeds ---- */
+    /* ---- 限制各轮速度 ---- */
     if (left_motor_speed  >  MAX_LINEAR_SPEED_MPS) left_motor_speed  =  MAX_LINEAR_SPEED_MPS;
     if (left_motor_speed  < -MAX_LINEAR_SPEED_MPS) left_motor_speed  = -MAX_LINEAR_SPEED_MPS;
     if (right_motor_speed >  MAX_LINEAR_SPEED_MPS) right_motor_speed =  MAX_LINEAR_SPEED_MPS;
@@ -260,14 +259,14 @@ void IR_LineDetect_Update(void)
 }
 
 /* ========================================================================
- * Accessor for Application layer (line_follow.c / state_machine.c)
+ * 应用层访问器（line_follow.c / state_machine.c）
  * ======================================================================== */
 
 /**
- * @brief  Get the last computed line-follow chassis command
- * @return ChassisCmd_t with (vx, wz) ready for motion control
+ * @brief  获取最近一次计算的循迹底盘命令
+ * @return 可供运动控制使用的 ChassisCmd_t（vx、wz）
  *
- * Call this after IR_LineDetect_Update() to feed MotionControl_SetTarget().
+ * 在 IR_LineDetect_Update() 后调用此函数，将结果传给 MotionControl_SetTarget()。
  */
 ChassisCmd_t IR_GetLineFollowCmd(void)
 {

@@ -1,12 +1,12 @@
 /**
  * @file    line_follow.h
- * @brief   Line-following control strategy
+ * @brief   循迹控制策略
  *
  * OWNER:  Team Member
  * STATUS: STUB — to be filled by team member
  *
- * Reads IR sensor state from Hardware/ir_track.h, computes
- * speed/turn corrections, and feeds target to MotionControl.
+ * 从 Hardware/ir_track.h 读取红外传感器状态，计算速度和转向修正，
+ * 并将目标值传入 MotionControl。
  */
 
 #ifndef _LINE_FOLLOW_H_
@@ -19,26 +19,26 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * Public Functions
+ * 公共函数
  * ======================================================================== */
 
 /**
- * @brief  Initialize line-following parameters
+ * @brief  初始化循迹参数
  */
 void LineFollow_Init(void);
 
 /**
- * @brief  Compute speed correction from sensor state
- * @param  sensor_state  4-bit IR sensor reading (0x0 ~ 0xF)
- * @return Speed correction value (m/s, positive = turn right)
+ * @brief  根据传感器状态计算速度修正量
+ * @param  sensor_state  4 位红外传感器读数（0x0 ~ 0xF）
+ * @return 速度修正值（m/s，正值表示右转）
  *
- * @note   Also updates MotionControl target speeds internally
+ * @note   函数内部也会更新 MotionControl 的目标速度
  */
 float LineFollow_ComputeCorrection(uint8_t sensor_state);
 
 /**
- * @brief  Set base cruising speed
- * @param  speed_mps  Speed in m/s
+ * @brief  设置基础巡航速度
+ * @param  speed_mps  速度（m/s）
  */
 void LineFollow_SetBaseSpeed(float speed_mps);
 

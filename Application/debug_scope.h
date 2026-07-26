@@ -1,11 +1,11 @@
 /**
  * @file    debug_scope.h
- * @brief   Virtual oscilloscope / DataScope debug interface
+ * @brief   虚拟示波器 / DataScope 调试接口
  *
- * Sends real-time variable data to upper-computer visualization
- * software via UART for debugging purposes.
+ * 通过 UART 向上位机可视化软件发送实时变量数据，
+ * 用于调试。
  *
- * Uses the DataScope_DP protocol (Control/DataScope_DP.C).
+ * 使用 DataScope_DP 协议（Control/DataScope_DP.C）。
  */
 
 #ifndef _DEBUG_SCOPE_H_
@@ -18,19 +18,19 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * Public Functions
+ * 公共函数
  * ======================================================================== */
 
 /**
- * @brief  Send one channel of data to the virtual oscilloscope
- * @param  data     Float value to send
- * @param  channel  Channel index (1~10)
+ * @brief  向虚拟示波器发送一个通道的数据
+ * @param  data     待发送的浮点数值
+ * @param  channel  通道索引（1~10）
  */
 void Scope_SendChannel(float data, uint8_t channel);
 
 /**
- * @brief  Flush all buffered channels as a complete data frame
- * @param  num_channels  Number of channels in this frame
+ * @brief  将已缓冲的全部通道作为完整数据帧发送
+ * @param  num_channels  本帧中的通道数量
  */
 void Scope_SendFrame(uint8_t num_channels);
 

@@ -1,11 +1,11 @@
 /**
  * @file    bsp_siic.h
- * @brief   Software I2C bus abstraction interface
+ * @brief   软件 I2C 总线抽象接口
  *
- * Provides a generic I2C interface (pIICInterface_t) that can be
- * backed by either software bit-banged I2C or hardware I2C peripheral.
+ * 提供通用 I2C 接口（pIICInterface_t），可由软件模拟 I2C
+ * 或硬件 I2C 外设实现。
  *
- * Ported from: WHEELTEC_C07A_BalanceCar/BSP/Inc/bsp_siic.h
+ * 移植自：WHEELTEC_C07A_BalanceCar/BSP/Inc/bsp_siic.h
  */
 
 #ifndef __BSP_SIIC_H
@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * Type Definitions
+ * 类型定义
  * ======================================================================== */
 
 typedef enum {
@@ -34,19 +34,19 @@ typedef enum {
 typedef struct {
     void (*init)(void);
 
-    /* Raw write: DevAddress + data */
+    /* 原始写：设备地址 + 数据 */
     IIC_Status_t (*write)(uint16_t DevAddress, uint8_t *pData,
                           uint16_t Size, uint32_t Timeout);
 
-    /* Raw read: DevAddress | 0x01 + read data */
+    /* 原始读：设备地址 | 0x01 + 读取数据 */
     IIC_Status_t (*read)(uint16_t DevAddress, uint8_t *pData,
                          uint16_t Size, uint32_t Timeout);
 
-    /* Register write: DevAddress + RegAddress + data */
+    /* 寄存器写：设备地址 + 寄存器地址 + 数据 */
     IIC_Status_t (*write_reg)(uint16_t DevAddress, uint16_t MemAddress,
                               uint8_t *pData, uint16_t Size, uint32_t Timeout);
 
-    /* Register read: DevAddress(write) + RegAddress + restart + DevAddress(read) + data */
+    /* 寄存器读：设备地址（写）+ 寄存器地址 + 重启 + 设备地址（读）+ 数据 */
     IIC_Status_t (*read_reg)(uint16_t DevAddress, uint16_t MemAddress,
                              uint8_t *pData, uint16_t Size, uint32_t Timeout);
 
@@ -54,12 +54,12 @@ typedef struct {
 } IICInterface_t, *pIICInterface_t;
 
 /* ========================================================================
- * Global I2C Device
+ * 全局 I2C 设备
  * ======================================================================== */
 extern IICInterface_t User_sIICDev;
 
 /**
- * @brief  Unlock stuck I2C bus (release SDA if held low by device)
+ * @brief  解锁挂起的 I2C 总线（设备拉低 SDA 时释放 SDA）
  */
 void mpu6050_i2c_sda_unlock(void);
 

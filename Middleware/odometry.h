@@ -1,9 +1,9 @@
 /**
  * @file    odometry.h
- * @brief   Wheel odometry — encoder pulses → position & velocity
+ * @brief   车轮里程计：编码器脉冲 → 位置与速度
  *
- * Converts encoder counts to real-world position (x, y, theta)
- * using dead-reckoning with differential drive model.
+ * 使用差速驱动的航位推算模型，将编码器计数换算为实际位置
+ * （x、y、theta）。
  */
 
 #ifndef _ODOMETRY_H_
@@ -16,51 +16,51 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * Type Definitions
+ * 类型定义
  * ======================================================================== */
 
 typedef struct {
-    float x;       /* Global X position (m)               */
-    float y;       /* Global Y position (m)               */
-    float theta;   /* Heading angle (rad), (-PI ~ +PI)    */
-    float vx;      /* Current forward speed (m/s)         */
-    float vz;      /* Current angular speed (rad/s)       */
+    float x;       /* 全局 X 坐标（m）                     */
+    float y;       /* 全局 Y 坐标（m）                     */
+    float theta;   /* 航向角（rad），范围为 -PI ~ +PI       */
+    float vx;      /* 当前前向速度（m/s）                  */
+    float vz;      /* 当前角速度（rad/s）                  */
 } Odom_t;
 
 /* ========================================================================
- * Public Functions
+ * 公共函数
  * ======================================================================== */
 
 /**
- * @brief  Initialize odometry (reset pose to origin)
+ * @brief  初始化里程计（将位姿重置到原点）
  */
 void Odom_Init(void);
 
 /**
- * @brief  Update odometry from encoder counts
- * @param  encL     Left encoder pulse count (since last call)
- * @param  encR     Right encoder pulse count (since last call)
- * @param  dt       Time delta (seconds)
+ * @brief  根据编码器计数更新里程计
+ * @param  encL     左编码器脉冲数（距上次调用）
+ * @param  encR     右编码器脉冲数（距上次调用）
+ * @param  dt       时间间隔（秒）
  *
- * @note   Call at CONTROL_FREQ_HZ (200Hz) from timer ISR
- * @note   encL/encR are RESET to zero inside encoder ISR after each read
+ * @note   应在定时器中断服务程序中以 CONTROL_FREQ_HZ（200Hz）调用
+ * @note   每次读取后，编码器中断服务程序会将 encL/encR 复位为零
  */
 void Odom_Update(int32_t encL, int32_t encR, float dt);
 
 /**
- * @brief  Get current pose and velocity
- * @return Copy of odometry state
+ * @brief  获取当前位姿和速度
+ * @return 里程计状态副本
  */
 Odom_t Odom_GetPose(void);
 
 /**
- * @brief  Reset odometry to origin (0, 0, 0)
+ * @brief  将里程计重置为原点（0、0、0）
  */
 void Odom_Reset(void);
 
 /**
- * @brief  Get total distance traveled (m)
- * @return Total travel distance
+ * @brief  获取累计行驶距离（m）
+ * @return 累计行驶距离
  */
 float Odom_GetDistance(void);
 

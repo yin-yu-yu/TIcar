@@ -1,14 +1,14 @@
 /**
  * @file    pid.h
- * @brief   Generic PID controller (incremental PI, optional D)
+ * @brief   通用 PID 控制器（增量式 PI，可选微分项）
  *
- * Implements incremental PID:
+ * 实现增量式 PID：
  *   output += Kp*(err - prev_err) + Ki*err + Kd*(err - 2*prev_err + prev_prev_err)
  *
- * Features:
- *   - Output clamping (out_min ~ out_max)
- *   - Integral anti-windup (clamping stops integration)
- *   - PID_Reset() to clear all state
+ * 功能：
+ *   - 输出限幅（out_min ~ out_max）
+ *   - 积分抗饱和（达到限幅时停止积分）
+ *   - 使用 PID_Reset() 清除全部状态
  */
 
 #ifndef _PID_H_
@@ -19,67 +19,67 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * Type Definitions
+ * 类型定义
  * ======================================================================== */
 
 typedef struct {
-    float Kp;            /* Proportional gain                              */
-    float Ki;            /* Integral gain                                  */
-    float Kd;            /* Derivative gain (0 = PI only)                  */
-    float setpoint;      /* Target value                                   */
-    float integral;      /* Accumulated integral error                     */
-    float prev_error;    /* Error from previous iteration                  */
-    float prev_prev_error; /* Error from two iterations ago (for D term)   */
-    float out_min;       /* Minimum output clamp                           */
-    float out_max;       /* Maximum output clamp                           */
-    float output;        /* Current controller output                      */
+    float Kp;            /* 比例增益                                       */
+    float Ki;            /* 积分增益                                       */
+    float Kd;            /* 微分增益（0 表示仅使用 PI）                    */
+    float setpoint;      /* 目标值                                         */
+    float integral;      /* 累积积分误差                                   */
+    float prev_error;    /* 上一次迭代的误差                               */
+    float prev_prev_error; /* 上上次迭代的误差（供微分项使用）             */
+    float out_min;       /* 输出下限                                       */
+    float out_max;       /* 输出上限                                       */
+    float output;        /* 当前控制器输出                                 */
 } PID_t;
 
 /* ========================================================================
- * Public Functions
+ * 公共函数
  * ======================================================================== */
 
 /**
- * @brief  Initialize a PID controller
- * @param  pid   Pointer to PID struct
- * @param  kp    Proportional gain
- * @param  ki    Integral gain
- * @param  kd    Derivative gain (0 = PI only)
- * @param  min   Minimum output value
- * @param  max   Maximum output value
+ * @brief  初始化 PID 控制器
+ * @param  pid   PID 结构体指针
+ * @param  kp    比例增益
+ * @param  ki    积分增益
+ * @param  kd    微分增益（0 表示仅使用 PI）
+ * @param  min   输出最小值
+ * @param  max   输出最大值
  */
 void PID_Init(PID_t *pid, float kp, float ki, float kd, float min, float max);
 
 /**
- * @brief  Set the target (setpoint) value
- * @param  pid       Pointer to PID struct
- * @param  setpoint  Desired target value
+ * @brief  设置目标值（设定值）
+ * @param  pid       PID 结构体指针
+ * @param  setpoint  期望目标值
  */
 void PID_SetSetpoint(PID_t *pid, float setpoint);
 
 /**
- * @brief  Compute one iteration of PID control
- * @param  pid       Pointer to PID struct
- * @param  measured  Current measured value (feedback)
- * @param  dt        Time delta since last call (seconds)
- * @return           Controller output (clamped)
+ * @brief  执行一次 PID 控制计算
+ * @param  pid       PID 结构体指针
+ * @param  measured  当前测量值（反馈值）
+ * @param  dt        距上次调用的时间间隔（秒）
+ * @return           限幅后的控制器输出
  *
- * @note   Call at fixed frequency (e.g., 200Hz = dt=0.005)
+ * @note   应以固定频率调用（例如 200Hz 对应 dt=0.005）
  */
 float PID_Compute(PID_t *pid, float measured, float dt);
 
 /**
- * @brief  Reset PID state (clear integral, errors, output)
- * @param  pid  Pointer to PID struct
+ * @brief  重置 PID 状态（清除积分、误差和输出）
+ * @param  pid  PID 结构体指针
  */
 void PID_Reset(PID_t *pid);
 
 /**
- * @brief  Tune gains at runtime
- * @param  pid  Pointer to PID struct
- * @param  kp   New proportional gain
- * @param  ki   New integral gain
- * @param  kd   New derivative gain
+ * @brief  在运行时调整增益
+ * @param  pid  PID 结构体指针
+ * @param  kp   新的比例增益
+ * @param  ki   新的积分增益
+ * @param  kd   新的微分增益
  */
 void PID_SetGains(PID_t *pid, float kp, float ki, float kd);
 
