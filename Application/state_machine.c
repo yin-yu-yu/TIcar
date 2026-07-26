@@ -74,7 +74,7 @@ void SM_Init(void)
     MotionControl_Init();
     LineFollow_Init();
     BT_Protocol_Init();
-    /* MPU6050_Init();  // 移植 IMU 驱动后取消注释 */
+    MPU6050_Init();   /* IMU: I2C 初始化 + 寄存器配置 (内部标志防重复调用) */
 }
 
 void SM_Run(void)

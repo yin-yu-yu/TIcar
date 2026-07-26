@@ -1,0 +1,3 @@
+- [项目概览](project-overview.md) — MSPM0G3507 差分小车，四层架构，关键文件清单
+- [MPU6050 驱动](mpu6050-driver.md) — 移植参数，Mahony AHRS，API 约束
+- [编译调试](build-and-debug.md) — TI Clang 命令行，CHASSIS_DEBUG，makefile

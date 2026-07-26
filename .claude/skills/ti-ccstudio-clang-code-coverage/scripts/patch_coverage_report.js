@@ -65,8 +65,7 @@
 //                   Use "TI C29 Clang" for C29 / C2000 projects.
 //   --ti-css        Path to the shared ti-brand.css file from the CCS installation.
 //                   When provided, the file is read and used instead of the embedded
-//                   fallback CSS. Resolve via ccs.settings.md + platform path to
-//                   {ccs_install}/ccs/.../ai/styles/ti-brand.css.
+//                   fallback CSS. Resolve as {ccs-ai-resources-dir}/styles/ti-brand.css.
 //
 // Idempotency:
 //   The script checks for a sentinel element (<div class='ti-patched'>) before
@@ -137,12 +136,15 @@ var ENV_DETECT_SCRIPT = "\
   var inWebview = (window.parent !== window);\
   if(!inWebview) return;\
   document.body.classList.add('ccstudio');\
-  var dark = false;\
-  var tk = document.body.getAttribute('data-vscode-theme-kind')\
-        || document.documentElement.getAttribute('data-vscode-theme-kind');\
-  if(tk) {\
-    dark = (tk === 'vscode-dark' || tk === 'vscode-high-contrast');\
-  } else {\
+  \
+  /* Determine whether dark mode is active using three methods in priority order:\
+     1. data-vscode-theme-kind attribute (most reliable in Theia webview)\
+     2. --vscode-editor-background CSS variable luminance\
+     3. prefers-color-scheme media query (OS-level fallback) */\
+  function isDark() {\
+    var tk = document.body.getAttribute('data-vscode-theme-kind')\
+          || document.documentElement.getAttribute('data-vscode-theme-kind');\
+    if(tk) return (tk === 'vscode-dark' || tk === 'vscode-high-contrast');\
     var bg = getComputedStyle(document.documentElement)\
              .getPropertyValue('--vscode-editor-background');\
     if(bg && bg.trim()) {\
@@ -153,14 +155,32 @@ var ENV_DETECT_SCRIPT = "\
       document.body.removeChild(d);\
       var m = c.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/);\
       if(m) {\
-        var lum = (0.299*parseInt(m[1]) + 0.587*parseInt(m[2]) + 0.114*parseInt(m[3])) / 255;\
-        dark = (lum < 0.5);\
+        var lum=(0.299*parseInt(m[1])+0.587*parseInt(m[2])+0.114*parseInt(m[3]))/255;\
+        return lum < 0.5;\
       }\
-    } else if(window.matchMedia) {\
-      dark = window.matchMedia('(prefers-color-scheme: dark)').matches;\
     }\
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);\
   }\
-  if(dark) document.body.classList.add('dark');\
+  \
+  /* Apply or remove the dark class based on current theme state */\
+  function applyTheme() {\
+    if(isDark()) document.body.classList.add('dark');\
+    else document.body.classList.remove('dark');\
+  }\
+  \
+  applyTheme();\
+  \
+  /* Watch for IDE theme changes via data-vscode-theme-kind attribute mutations.\
+     Theia sets this attribute on <html> and/or <body> when the user switches theme. */\
+  new MutationObserver(applyTheme).observe(document.documentElement,\
+    {attributes:true, attributeFilter:['data-vscode-theme-kind']});\
+  new MutationObserver(applyTheme).observe(document.body,\
+    {attributes:true, attributeFilter:['data-vscode-theme-kind']});\
+  \
+  /* Also respond to OS-level prefers-color-scheme changes (external browser) */\
+  if(window.matchMedia) {\
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);\
+  }\
 })();\
 </script>";
 

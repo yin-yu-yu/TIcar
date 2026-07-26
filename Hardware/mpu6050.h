@@ -3,10 +3,15 @@
  * @brief   MPU6050 6-axis IMU driver interface
  *
  * Hardware: MPU6050 (3-axis gyro + 3-axis accelerometer)
- * Interface: I2C (software or hardware, to be configured)
+ * Interface: Software I2C (PA0=SDA, PA1=SCL) via bsp_siic.h
  *
- * STATUS: STUB — Team member to port from reference project
- *         See README.md for AI agent prompt
+ * STATUS: COMPLETE — Ported from WHEELTEC_C07A_BalanceCar
+ *         Uses Mahony AHRS (quaternion + PI correction) for
+ *         attitude estimation without DMP firmware dependency.
+ *
+ * Accel output: g (1/16384 LSB/g for ±2g range)
+ * Gyro output:  deg/s (1/16.4 LSB/dps for ±2000dps range)
+ * Angle output: deg (roll/pitch/yaw from Mahony AHRS)
  */
 
 #ifndef _MPU6050_H_
@@ -24,14 +29,15 @@ extern "C" {
  * ======================================================================== */
 
 /**
- * @brief  Initialize MPU6050 and DMP (Digital Motion Processor)
- * @note   Configures I2C, initializes DMP for angle output
+ * @brief  Initialize MPU6050 via software I2C
+ * @note   Verifies WHO_AM_I, configures gyro ±2000dps, accel ±2g,
+ *         DLPF ~44Hz, sample rate 200Hz. Idempotent via g_initialized flag.
  */
 void MPU6050_Init(void);
 
 /**
- * @brief  Check if new MPU6050 data is available
- * @return true if DMP data ready, false otherwise
+ * @brief  Check if new sensor data has been read
+ * @return true after a successful MPU6050_Read() call
  */
 bool MPU6050_DataReady(void);
 

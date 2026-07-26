@@ -36,9 +36,10 @@ project/
 │   ├── board.c/h                # 板级支持 (SysTick/延时/printf)
 │   ├── motor.c/h                # 电机 PWM + 方向控制
 │   ├── encoder.c/h              # 编码器正交解码
-│   ├── mpu6050.c/h              # MPU6050 IMU — STUB 待移植
-│   ├── ir_track.h               # 四路循迹接口
-│   ├── IR_Module.c/h            # 四路循迹驱动 (待整合)
+│   ├── mpu6050.c/h              # MPU6050 IMU (Mahony AHRS, 已完成)
+│   ├── bsp_siic.c/h             # 软件 I2C 驱动 (PA0=SDA, PA1=SCL)
+│   ├── ir_track.c/h             # 四路循迹驱动 (从 IR_Module 迁移)
+│   ├── IR_Module.c/h            # 四路循迹 (遗留，待废弃)
 │   ├── uart_debug.c/h           # 调试串口 UART0
 │   ├── uart_bt.c/h              # 蓝牙串口 UART1 + DMA
 │   ├── adc.c/h                  # 电池电压 ADC
@@ -63,7 +64,7 @@ project/
 │   ├── control.c/h              # 原始 PI 控制 + 运动学
 │   ├── show.c/h                 # OLED + APP 显示
 │   ├── uart_callback.c/h        # 蓝牙命令解析
-│   └── DataScope_DP.C/h         # 虚拟示波器协议
+│   └── DataScope_DP.c/h         # 虚拟示波器协议
 │
 ├── Debug/                       # SysConfig 生成 (只读，勿手动修改)
 │   └── ti_msp_dl_config.c/h
@@ -85,7 +86,7 @@ project/
 | 虚拟示波器 | ✅ 已完成 | — | DataScope 协议封装 |
 | 电机 + PWM | ✅ 已完成 | 队员 | 接口已标准化 |
 | 编码器 | ✅ 已完成 | 队员 | 接口已标准化 |
-| **MPU6050** | **❌ STUB** | **队员 D** | **唯一待移植模块** |
+| **MPU6050** | **✅ 已完成** | **队员 D** | Mahony AHRS + 软件 I2C |
 | 四路循迹 | ✅ 已完成 | 队员 | IR_Module → ir_track |
 | 调试串口 | ✅ 已完成 | — | UART0 |
 | OLED 显示 | ✅ 已完成 | — | 状态/电压/速度 |
@@ -164,18 +165,6 @@ project/
 ```
 将 Hardware/IR_Module.c 中的 IRDM_line_inspection() 逻辑迁移到 Application/line_follow.c。
 
-现有功能:
-- 4 路 IR 传感器状态分类 (十字/直角弯/大弯/小弯/直线/脱线)
-- 可调转弯参数: Turn90Angle, TurnMaxAngle, TurnMidAngle, TurnMinAngle
-- 基准速度: BaseSpeed = 150mm/s
-- 速度随转弯幅度递减
-
-要求:
-1. 封装为 LineFollow_ComputeCorrection(sensor_state)
-2. 参数引用 Config/robot_config.h 和 Config/pid_config.h
-3. 输出通过 MotionControl_SetTarget() 控制电机
-
-参考: Hardware/IR_Module.c IRDM_line_inspection()
 ```
 
 ### 模块 4: 蓝牙协议
@@ -235,5 +224,5 @@ PID 默认参数: KP=400, KI=400, KD=0 (Config/pid_config.h)
 | 按键 | PA18 | |
 | LED | PB9 | |
 | 电池 ADC | PA15 | ADC1_CH0, 11:1 分压 |
-| MPU6050 I2C | (待确认) | |
+| MPU6050 I2C | PA0(SDA), PA1(SCL) | 软件 I2C |
 | 额外 PWM | (待确认) | |
