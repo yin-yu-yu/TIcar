@@ -25,6 +25,8 @@
 extern float Voltage;
 extern float Velocity_Left, Velocity_Right;
 extern u8    PID_Send;
+extern volatile bool g_DebugMode;
+extern volatile bool g_ModeSwitchRequest;
 
 /* ========================================================================
  * OLED status display (competition mode)
@@ -49,15 +51,29 @@ static void CompMode_OLED_Show(void)
 
 void CompMode_Run(void)
 {
-    OLED_ShowString(0, 0, "COMP MODE");
-    OLED_Refresh_Gram();
-    delay_ms(3000);
+    static bool first_run = true;
+
+    /* ---- Only show boot banner on first entry after reset ---- */
+    if (first_run) {
+        OLED_ShowString(0, 0, "COMP MODE");
+        OLED_Refresh_Gram();
+        delay_ms(3000);
+        first_run = false;
+    }
 
     /* ====================================================================
      * Competition main loop
      * ==================================================================== */
     while (1)
     {
+        /* ---- Mode switch: long-press key → debug mode ---- */
+        if (g_ModeSwitchRequest) {
+            g_ModeSwitchRequest = false;
+            g_DebugMode = true;
+            Motor_Stop();
+            return;
+        }
+
         static uint8_t bt_toggle = 0;
 
         /* ---- Battery monitoring ---- */

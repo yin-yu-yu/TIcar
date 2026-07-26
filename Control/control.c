@@ -37,6 +37,9 @@ int Run_Mode=1;//小车运行模式
 u8 Flag_Stop=1;//小车停止标志位
 void TIM_Diff(void);  // 前向声明
 
+/* ---- Mode switch (from ISR → main loop) ---- */
+extern volatile bool g_ModeSwitchRequest;
+
 void TIMER_0_INST_IRQHandler(void)
 {
     if(DL_TimerA_getPendingInterrupt(TIMER_0_INST))
@@ -254,5 +257,9 @@ void Key(void)
         {
                 Run_Mode++;
                 Run_Mode%=2;
+        }
+        else if(tmp==3)         //长按 → 切换调试/比赛模式
+        {
+                g_ModeSwitchRequest = true;
         }
 }

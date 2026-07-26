@@ -29,6 +29,8 @@
 
 /* ---- External globals referenced in debug loop ---- */
 extern float Voltage;
+extern volatile bool g_DebugMode;
+extern volatile bool g_ModeSwitchRequest;
 
 /* ========================================================================
  * Static helpers — one per interface test
@@ -36,15 +38,16 @@ extern float Voltage;
 
 static void Test_Motor(void)
 {
+    MotionControl_Init();
     Debug_Printf("--- Test 1: Motor Interface ---\r\n");
     Debug_Printf("Motor: Forward\r\n");
-    Motor_SetPWM(2000, 2000);
+    Motor_SetPWM(8000, 8000);
     delay_ms(500);
     Debug_Printf("Motor: Stop\r\n");
     Motor_Stop();
     delay_ms(500);
     Debug_Printf("Motor: Backward\r\n");
-    Motor_SetPWM(-2000, -2000);
+    Motor_SetPWM(-8000, -8000);
     delay_ms(500);
     Motor_Stop();
     Debug_Printf("Motor: OK\r\n");
@@ -209,42 +212,58 @@ static void Test_MPU6050(void)
 
 void DebugMode_Run(void)
 {
-    /* ---- Debug-mode boot banner ---- */
-    OLED_ShowString(0, 0, "DEBUG MODE");
-    OLED_Refresh_Gram();
-    delay_ms(3000);
+    static bool first_run = true;
 
-    /* ---- Interface test banner ---- */
-    OLED_Clear();
-    OLED_ShowString(0, 0, "IF TEST...");
-    OLED_Refresh_Gram();
+    /* ---- Only run tests on first entry after reset ---- */
+    if (first_run) {
+        
+        /* ---- Debug-mode boot banner ---- */
+        OLED_ShowString(0, 0, "DEBUG MODE");
+        OLED_Refresh_Gram();
+        delay_ms(3000);
 
-    /* ---- Run all interface verification tests ---- */
-    Test_Motor();
-    Test_Encoder();
-    Test_IR();
-    Test_Battery();
-    Test_PID();
-    Test_Kinematics();
-    Test_Odometry();
-    Test_MotionControl();
-    Test_LineFollow();
-    Test_BTProtocol();
-    Test_Scope();
-    Test_Filter();
-    Test_MPU6050();
+        /* ---- Interface test banner ---- */
+        OLED_Clear();
+        OLED_ShowString(0, 0, "IF TEST...");
+        OLED_Refresh_Gram();
 
-    /* ---- All tests complete ---- */
-    OLED_Clear();
-    OLED_ShowString(0, 0, "ALL IF OK!");
-    OLED_Refresh_Gram();
-    Debug_Printf("\r\n======== ALL INTERFACES OK ========\r\n");
+        /* ---- Run all interface verification tests ---- */
+        Test_Motor();
+        Test_Encoder();
+        Test_IR();
+        Test_Battery();
+        Test_PID();
+        Test_Kinematics();
+        Test_Odometry();
+        Test_MotionControl();
+        Test_LineFollow();
+        Test_BTProtocol();
+        Test_Scope();
+        Test_Filter();
+        Test_MPU6050();
+
+        /* ---- All tests complete ---- */
+        OLED_Clear();
+        OLED_ShowString(0, 0, "ALL IF OK!");
+        OLED_Refresh_Gram();
+        Debug_Printf("\r\n======== ALL INTERFACES OK ========\r\n");
+
+        first_run = false;
+    }
 
     /* ====================================================================
      * Debug main loop — team members add test code below
      * ==================================================================== */
     while (1)
     {
+        /* ---- Mode switch: long-press key → competition mode ---- */
+        if (g_ModeSwitchRequest) {
+            g_ModeSwitchRequest = false;
+            g_DebugMode = false;
+            Motor_Stop();
+            return;
+        }
+
         Voltage = Get_battery_volt();
         BTBufferHandler();       /* Legacy BT handler — non-intrusive in debug mode */
 

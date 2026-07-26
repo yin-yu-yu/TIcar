@@ -6,13 +6,13 @@
  *    队员调试代码 → debugmode.c
  *    比赛模式代码 → compmode.c
  *
- * 构建模式（由 CHASSIS_DEBUG 宏控制）：
- *   #define CHASSIS_DEBUG   → 调试模式（运行接口测试 + 队员调试区）
- *   //#define CHASSIS_DEBUG → 比赛模式（完整状态机自主/遥控操作）
+ * 模式切换：
+ *   编译默认：CHASSIS_DEBUG 宏决定初始模式
+ *   运行切换：长按按键（>500ms）在调试/比赛模式间切换
  *
  * 架构：
- *   main() 初始化硬件 → 分发到 DebugMode_Run() 或 CompMode_Run()
- *   TIMER_0 ISR (200Hz, Control/control.c) 处理实时控制（编码器、PID、状态机）
+ *   main() 初始化硬件 → 循环分发到 DebugMode_Run() / CompMode_Run()
+ *   TIMER_0 ISR (200Hz, Control/control.c) 处理实时控制 + 按键扫描
  */
 
 #define CHASSIS_DEBUG    /* ⚠️ 调试时取消注释；比赛时注释掉 */
@@ -33,8 +33,17 @@ float Velocity_Left, Velocity_Right;
 u16  test_num, show_cnt;
 float Voltage = 8.4f;
 
+/* ---- 模式切换（ISR 写 g_ModeSwitchRequest，主循环响应）---- */
+volatile bool g_DebugMode =
+#ifdef CHASSIS_DEBUG
+    true;
+#else
+    false;
+#endif
+volatile bool g_ModeSwitchRequest = false;
+
 /* ========================================================================
- * main() — 初始化后分发给当前模式
+ * main() — 初始化后循环分发到当前模式
  * ======================================================================== */
 int main(void)
 {
@@ -66,10 +75,12 @@ int main(void)
         SM_Init();
     }
 
-    /* ---- 模式分发（两个模式均在独立文件中，不会返回）---- */
-#ifdef CHASSIS_DEBUG
-    DebugMode_Run();   /* debugmode.c — 13 项接口测试 + 队员调试循环 */
-#else
-    CompMode_Run();    /* compmode.c  — 比赛/遥控主循环 */
-#endif
+    /* ---- 模式分发循环（长按按键切换）---- */
+    while (1)
+    {
+        if (g_DebugMode)
+            DebugMode_Run();   /* debugmode.c — 返回时切换到比赛模式 */
+        else
+            CompMode_Run();    /* compmode.c  — 返回时切换到调试模式 */
+    }
 }

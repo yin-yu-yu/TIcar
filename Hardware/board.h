@@ -140,6 +140,10 @@ extern int Get_Encoder_countA, Get_Encoder_countB;
 /* ---- BT control flags (from uart_callback.c) ---- */
 extern int Flag_Left, Flag_Right, Flag_Direction, Turn_Flag;
 
+/* ---- Mode switch (debug ↔ competition, long-press key) ---- */
+extern volatile bool g_DebugMode;
+extern volatile bool g_ModeSwitchRequest;
+
 /* ========================================================================
  * Global Variables — LEGACY (balance car remnants, to be removed)
  *   These are kept for compilation compatibility with existing modules.
