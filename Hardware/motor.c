@@ -23,7 +23,7 @@
 #include "robot_config.h"
 
 /* ---- Internal helper: set one motor channel ---- */
-static void Motor_SetChannel(uint32_t port, uint32_t pin1, uint32_t pin2,
+static void Motor_SetChannel(GPIO_Regs *port, uint32_t pin1, uint32_t pin2,
                              int16_t pwm, uint32_t ccIdx)
 {
     uint32_t duty = (uint32_t)ABS(pwm);

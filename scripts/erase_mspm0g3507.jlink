@@ -1,0 +1,26 @@
+// J-Link Commander script: Erase MSPM0G3507
+// Target: MSPM0G3507 via J-Link @ 192.168.31.56
+
+// Select the debug probe by IP
+ip 192.168.31.56
+
+// Silence connect confirmation prompts (no "Connected" dialog)
+NoPrompt 1
+
+// Select the SWD interface
+si 1
+
+// Set the target device
+device MSPM0G3507
+
+// Set interface speed to 1000 kHz
+speed 1000
+
+// Connect to the target
+connect
+
+// Erase the entire chip
+erase
+
+// Disconnect and exit
+exit
