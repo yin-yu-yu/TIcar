@@ -14,6 +14,7 @@
                         <subpath id="subpath_0">
                             <cpu XML_version="1.2" id="CORTEX_M0P" HW_revision="1.0" isa="CORTEX_M0P" description="Cortex M0+ CPU">
                                 <property id="JTAG Frequency (Hz)" Type="stringfield" Value="1000k"/>
+                                <property id="J-Link Scriptfile Path" Type="filepathfield" Value="D:/Code/TI-Projects/TIcar/targetConfigs/JLinkOverrideHostIF.jlinkscript"/>
                             </cpu>
                         </subpath>
                     </router>
