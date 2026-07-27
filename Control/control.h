@@ -23,7 +23,8 @@ All rights reserved
 
 extern int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
 #define EncoderMultiples  2				//编码器倍频数，取决于编码器初始化设置
-#define CONTROL_FREQUENCY 200			//编码器数据读取频率
+#define CONTROL_FREQUENCY       400U  /* 红外、按键和目标更新频率 */
+#define SPEED_LOOP_FREQUENCY    200U  /* 编码器测速与PI闭环频率 */
 #define	Black_WheelDiameter   0.065f	//轮胎直径
 #define Perimeter	0.204203519			//轮子周长(单位:m)
 #define MOTOR_GEAR_RATIO       28.0f    // 电机减速比

@@ -1,20 +1,23 @@
-#ifndef _IR_MODULE_H
+ï»¿#ifndef _IR_MODULE_H
 #define _IR_MODULE_H
 #include "ti_msp_dl_config.h"
 #include "board.h"
 extern uint32_t ir_dh1_state, ir_dh2_state, ir_dh3_state, ir_dh4_state;
-// ºìÍâÒı½Å¶ÁÈ¡ºê¶¨Òå
+// çº¢å¤–å¼•è„šè¯»å–å®å®šä¹‰
 #define IR_DH1_Read()   (DL_GPIO_readPins(IR_DH1_PORT, IR_DH1_PIN_17_PIN) ? 1 : 0)
 #define IR_DH2_Read()   (DL_GPIO_readPins(IR_DH2_PORT, IR_DH2_PIN_16_PIN) ? 1 : 0)
 #define IR_DH3_Read()   (DL_GPIO_readPins(IR_DH3_PORT, IR_DH3_PIN_12_PIN) ? 1 : 0)
 #define IR_DH4_Read()   (DL_GPIO_readPins(IR_DH4_PORT, IR_DH4_PIN_27_PIN) ? 1 : 0)
 void IR_Module_Read(void);
 void IRDM_line_inspection(void);
+uint8_t IR_GetCurrentMode(void);
+const char *IR_GetModeName(uint8_t mode);
 
-extern float Turn90Angle ;   // Ö±½ÇÍä×ªÏò²ÎÊı
-extern float TurnMaxAngle;   // ´óÍäµÀ×ªÏò²ÎÊı
-extern float TurnMidAngle;   // ÖĞµÈ×ªÏò²ÎÊı£¨¶ªÏßÊ±Ê¹ÓÃ£©
-extern float TurnMinAngle;   // Î¢µ÷×ªÏò²ÎÊı
-extern float base_speed_mm ,BaseSpeed,ForwardLimit;// »ù´¡ËÙ¶È£¨mm/s£©
-extern float turn_diff ;    // ×ªÏò²îËÙ
+extern float Turn90Angle ;   // ç›´è§’å¼¯è½¬å‘å‚æ•°
+extern float TurnMaxAngle;   // å¤§å¼¯é“è½¬å‘å‚æ•°
+extern float TurnMidAngle;   // ä¸­ç­‰è½¬å‘å‚æ•°ï¼ˆä¸¢çº¿æ—¶ä½¿ç”¨ï¼‰
+extern float TurnMinAngle;   // å¾®è°ƒè½¬å‘å‚æ•°
+extern float base_speed_mm, BaseSpeed, BigTurnBaseSpeed, ForwardLimit;// åŸºç¡€é€Ÿåº¦ï¼ˆmm/sï¼‰
+extern float turn_diff ;    // è½¬å‘å·®é€Ÿ
 #endif
+

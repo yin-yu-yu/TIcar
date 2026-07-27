@@ -15,7 +15,9 @@
  *   TIMER_0 ISR (200Hz, Control/control.c) 处理实时控制 + 按键扫描
  */
 
-#define CHASSIS_DEBUG    /* ⚠️ 调试时取消注释；比赛时注释掉 */
+/* 默认进入比赛/巡线状态机。
+ * 如需运行会主动驱动电机的 13 项接口自检，再取消下面一行注释。 */
+/* #define CHASSIS_DEBUG */
 
 #include "board.h"
 #include "show.h"

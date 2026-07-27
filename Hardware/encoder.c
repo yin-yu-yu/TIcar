@@ -1,7 +1,20 @@
 #include "encoder.h"
 #include "led.h"
 uint32_t gpio_interrup1,gpio_interrup2;
-int Get_Encoder_countA,Get_Encoder_countB;
+volatile int32_t Get_Encoder_countA,Get_Encoder_countB;
+
+void Encoder_GetAndResetCounts(int32_t *countA, int32_t *countB)
+{
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+
+    *countA = Get_Encoder_countA;
+    *countB = Get_Encoder_countB;
+    Get_Encoder_countA = 0;
+    Get_Encoder_countB = 0;
+
+    if (primask == 0U) __enable_irq();
+}
 /*******************************************************
 函数功能：外部中断模拟编码器信号
 入口函数：无

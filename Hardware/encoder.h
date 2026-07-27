@@ -17,8 +17,11 @@ extern "C" {
 #endif
 
 /* ---- Encoder count accumulators (incremented in ISR) ---- */
-extern int32_t Get_Encoder_countA;
-extern int32_t Get_Encoder_countB;
+extern volatile int32_t Get_Encoder_countA;
+extern volatile int32_t Get_Encoder_countB;
+
+/** 原子地读取并清零两路编码器累计值，避免中断脉冲在读/清零间丢失。 */
+void Encoder_GetAndResetCounts(int32_t *countA, int32_t *countB);
 
 /* ========================================================================
  * Public Functions

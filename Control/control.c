@@ -25,13 +25,16 @@ All rights reserved
  *   #define USE_NEW_API → 使用新架构 (SM_Run + MotionControl_Update)
  *   注释掉           → 使用旧架构 (TIM_Diff, 增量PI)
  * ======================================================================== */
-#define USE_NEW_API
+/* 临时使用 WHEELTEC 示例工程的原始巡线控制链路进行实车验证。
+ * 验证完成后重新定义 USE_NEW_API，即可切回状态机 + MotionControl。 */
+/* #define USE_NEW_API */
 
 u8 CCD_count,ELE_count;
 int Sensor_Left,Sensor_Middle,Sensor_Right,Sensor;
 
 Encoder OriginalEncoder;                    //编码器原始数据
 Motor_parameter MotorA,MotorB;              //左右电机相关变量
+/* 速度PI在200Hz运行，与原示例的调参基准一致。 */
 float Velocity_KP=400,Velocity_KI=400;
 int Run_Mode=1;//小车运行模式
 u8 Flag_Stop=1;//小车停止标志位
@@ -76,22 +79,33 @@ void TIMER_0_INST_IRQHandler(void)
 }
 void TIM_Diff(void)
 {
-            Get_Velocity_From_Encoder(Get_Encoder_countA,Get_Encoder_countB);
-            Get_Encoder_countA=Get_Encoder_countB=0;
+            static uint32_t speed_loop_divider = 0U;
+
+            /* 红外和目标轮速保持400Hz更新。 */
             if(Run_Mode==0)
             {
                 Get_RC();         //处理APP遥控命令
             }else if(Run_Mode==1){
                 IRDM_line_inspection();
             }
-//          //计算左右电机对应的PWM
-            MotorA.Motor_Pwm = Incremental_PI_Left(MotorA.Current_Encoder,MotorA.Target_Encoder);
-            MotorB.Motor_Pwm = Incremental_PI_Right(MotorB.Current_Encoder,MotorB.Target_Encoder);
-            if(!Flag_Stop)
-            Set_PWM(MotorA.Motor_Pwm,MotorB.Motor_Pwm);
-            else
-            Set_PWM(0,0);
+
+            /* 编码器和PI只在200Hz运行，累计更多脉冲以改善低速分辨率。 */
+            if (++speed_loop_divider >= (CONTROL_FREQUENCY / SPEED_LOOP_FREQUENCY))
+            {
+                int32_t encoderA, encoderB;
+                speed_loop_divider = 0U;
+                Encoder_GetAndResetCounts(&encoderA, &encoderB);
+                Get_Velocity_From_Encoder(-encoderA, -encoderB);
+
+                MotorA.Motor_Pwm = Incremental_PI_Left(MotorA.Current_Encoder,MotorA.Target_Encoder);
+                MotorB.Motor_Pwm = Incremental_PI_Right(MotorB.Current_Encoder,MotorB.Target_Encoder);
+                if(!Flag_Stop)
+                    Set_PWM(-MotorA.Motor_Pwm, MotorB.Motor_Pwm);
+                else
+                    Set_PWM(0,0);
+            }
             Key();
+            if (Flag_Stop) Set_PWM(0, 0);
 }
 /**************************************************************************
 功能：从编码器原始数据转换为速度
@@ -107,8 +121,8 @@ void Get_Velocity_From_Encoder(int Encoder1,int Encoder2)
         OriginalEncoder.B=-Encoder2;
         Encoder_A_pr=OriginalEncoder.A; Encoder_B_pr=-OriginalEncoder.B;
         //将编码器原始数据转换为轮子速度，单位m/s
-        MotorA.Current_Encoder= Encoder_A_pr*CONTROL_FREQUENCY*Perimeter/(EncoderMultiples*ENCODER_RESOLUTION*MOTOR_GEAR_RATIO);
-        MotorB.Current_Encoder= Encoder_B_pr*CONTROL_FREQUENCY*Perimeter/(EncoderMultiples*ENCODER_RESOLUTION*MOTOR_GEAR_RATIO);
+        MotorA.Current_Encoder= Encoder_A_pr*SPEED_LOOP_FREQUENCY*Perimeter/(EncoderMultiples*ENCODER_RESOLUTION*MOTOR_GEAR_RATIO);
+        MotorB.Current_Encoder= Encoder_B_pr*SPEED_LOOP_FREQUENCY*Perimeter/(EncoderMultiples*ENCODER_RESOLUTION*MOTOR_GEAR_RATIO);
 }
 
 
@@ -248,7 +262,7 @@ void Get_RC(void)
 void Key(void)
 {
         u8 tmp,tmp2;
-        tmp=key_scan(200);//click_N_Double(50);
+        tmp=key_scan(CONTROL_FREQUENCY);//click_N_Double(50);
         if(tmp==1)
         {
                 Flag_Stop=!Flag_Stop;

@@ -39,8 +39,8 @@ static bool   g_target_valid;  /* 有效目标已设置时为真 */
 static float  g_ticks_to_m;
 
 /* ---- 编码器计数累加器（来自编码器 ISR）---- */
-extern int32_t Get_Encoder_countA;
-extern int32_t Get_Encoder_countB;
+extern volatile int32_t Get_Encoder_countA;
+extern volatile int32_t Get_Encoder_countB;
 
 /* ---- 停止标志（在 control.c 中定义，全项目使用）---- */
 extern uint8_t Flag_Stop;

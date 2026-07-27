@@ -1,126 +1,269 @@
 #include "IR_Module.h"
 #include "control.h"
+
+#include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
+
 uint32_t ir_dh1_state, ir_dh2_state, ir_dh3_state, ir_dh4_state;
-/*=============================================================================
- * 转弯角度参数
- *=============================================================================*/
-// 转弯角度参数
-float Turn90Angle  = 70;   // 直角弯转弯角度
-float TurnMaxAngle = 45;   // 大转弯角度
-float TurnMidAngle = 20;   // 中等转弯角度（丢失时默认转弯角度）
-float TurnMinAngle = 15;   // 微调转弯角度
-extern int temp;
-// 基础速度参数
-float BaseSpeed = 150;      // 基础巡航速度，直线时的速度
-float ForwardLimit = 70;		//前向限幅(转弯时束缚前进速度的下限比例)
-/*=============================================================================
- * 传感器状态枚举--识别到对应位时为1
- *=============================================================================*/
+
+/* ========================================================================== 
+ * 巡线可调参数
+ * 红外决策频率为 400Hz：1个周期 = 2.5ms。
+ * ========================================================================== */
+float Turn90Angle  = 135.0f;
+float TurnMaxAngle = 60.0f;
+float TurnMidAngle = 50.0f;
+float TurnMinAngle = 20.0f;
+
+float BaseSpeed    = 300.0f; /* mm/s */
+float BigTurnBaseSpeed = 220.0f; /* 大弯基础速度，左右轮约280/400mm/s */
+/* 转向降速尺度。600时，Turn90Angle=200约得到内轮0、外轮400mm/s。 */
+float ForwardLimit = 600.0f;
+
+uint32_t TurnStraightCycles   = 80U;  /* 200ms */
+uint32_t TurnHoldMaxCycles    = 600U; /* 1.0s */
+uint32_t TurnConfirmCycles    = 4U;   /* 直角状态持续10ms才确认 */
+uint32_t TurnMinHoldCycles    = 0U;  /* 开始转弯后立刻开始 */
+uint32_t TurnExitStraightCycles = 4U; /* 居中持续10ms后退出锁定 */
+
+uint32_t IRFilterSamples = 3U;       /* 同一原始状态连续3次才采用 */
+uint32_t LostSearchCycles = 640U;    /* 丢线后沿最近转向搜索1600ms */
+
+float WheelAccelLimit = 1000.0f;     /* mm/s^2 */
+float WheelDecelLimit = 1800.0f;     /* mm/s^2 */
+
 typedef enum {
-    STATE_CROSS         = 0,    // 0000 - 十字路口（全白）
-    STATE_LEFT_90_A     = 1,    // 0001 - 左直角弯
-	STATE_LEFT_90_B		= 3,	// 0011
-    STATE_RIGHT_90_A    = 8,  	// 1000 - 右直角弯
-	STATE_RIGHT_90_B    = 12,	// 1100
-    STATE_LEFT_BIG      = 7,    // 0111 - 大左转
-    STATE_RIGHT_BIG     = 14,   // 1110 - 大右转
-    STATE_LEFT_SMALL    = 11,   // 1011 - 小左转
-    STATE_RIGHT_SMALL   = 13,   // 1101 - 小右转
-    STATE_STRAIGHT      = 9,    // 1001 - 直行
-    STATE_LOST          = 15    // 1111 - 丢失（全黑）
+    STATE_CROSS         = 0x00, /* 四路都在黑线上 */
+    STATE_LEFT_90_A     = 0x01,
+    STATE_LEFT_90_B     = 0x03,
+    STATE_RIGHT_90_A    = 0x08,
+    STATE_RIGHT_90_B    = 0x0C,
+    STATE_LEFT_BIG      = 0x07,
+    STATE_RIGHT_BIG     = 0x0E,
+    STATE_LEFT_SMALL    = 0x0B,
+    STATE_RIGHT_SMALL   = 0x0D,
+    STATE_STRAIGHT      = 0x09,
+    STATE_LOST          = 0x0F  /* 四路都在白色区域 */
 } SensorState_t;
-float base_speed_mm = 0;        // 基础速度，mm/s
-float turn_diff = 0;            // 转弯差速
-/*=============================================================================
- * 巡线核心函数：根据传感器状态计算左右轮目标速度
- *=============================================================================*/
+
+float base_speed_mm = 0.0f;
+float turn_diff = 0.0f;
+static volatile uint8_t g_current_mode = STATE_LOST;
+
+uint8_t IR_GetCurrentMode(void)
+{
+    return g_current_mode;
+}
+
+const char *IR_GetModeName(uint8_t mode)
+{
+    switch (mode) {
+        case STATE_CROSS:         return "CROSS";
+        case STATE_LEFT_90_A:
+        case STATE_LEFT_90_B:     return "LEFT_90";
+        case STATE_RIGHT_90_A:
+        case STATE_RIGHT_90_B:    return "RIGHT_90";
+        case STATE_LEFT_BIG:      return "LEFT_BIG";
+        case STATE_RIGHT_BIG:     return "RIGHT_BIG";
+        case STATE_LEFT_SMALL:    return "LEFT_SMALL";
+        case STATE_RIGHT_SMALL:   return "RIGHT_SMALL";
+        case STATE_STRAIGHT:      return "STRAIGHT";
+        case STATE_LOST:          return "LOST";
+        default:                  return "ADJUST";
+    }
+}
+
+static bool Is90DegreeState(uint8_t state)
+{
+    return state == STATE_LEFT_90_A || state == STATE_LEFT_90_B ||
+           state == STATE_RIGHT_90_A || state == STATE_RIGHT_90_B;
+}
+
+static float SpeedRamp_Update(float current, float target)
+{
+    float rate = WheelAccelLimit;
+    if (fabsf(target) < fabsf(current) || current * target < 0.0f) {
+        rate = WheelDecelLimit;
+    }
+
+    float max_step = rate / (float)CONTROL_FREQUENCY;
+    float delta = target - current;
+    if (delta > max_step)  return current + max_step;
+    if (delta < -max_step) return current - max_step;
+    return target;
+}
+
+static uint8_t ReadRawSensorState(void)
+{
+    ir_dh4_state = DL_GPIO_readPins(IR_DH4_PORT, IR_DH4_PIN_17_PIN) ? 1U : 0U;
+    ir_dh3_state = DL_GPIO_readPins(IR_DH3_PORT, IR_DH3_PIN_16_PIN) ? 1U : 0U;
+
+    /* 实车第1、2路接线与原标号相反；黑线=0，白色反射=1。 */
+    ir_dh1_state = DL_GPIO_readPins(IR_DH2_PORT, IR_DH2_PIN_12_PIN) ? 1U : 0U;
+    ir_dh2_state = DL_GPIO_readPins(IR_DH1_PORT, IR_DH1_PIN_27_PIN) ? 1U : 0U;
+
+    return (uint8_t)((ir_dh1_state << 3) | (ir_dh2_state << 2) |
+                     (ir_dh3_state << 1) | ir_dh4_state);
+}
+
+static uint8_t FilterSensorState(uint8_t raw)
+{
+    static uint8_t last_raw = 0xFFU;
+    static uint8_t stable = STATE_LOST;
+    static uint32_t same_count = 0U;
+
+    if (raw == last_raw) {
+        if (same_count < UINT32_MAX) same_count++;
+    } else {
+        last_raw = raw;
+        same_count = 1U;
+    }
+
+    uint32_t required = IRFilterSamples > 0U ? IRFilterSamples : 1U;
+    if (same_count >= required) stable = raw;
+    return stable;
+}
+
+/* 未在原示例状态表中的组合，根据所有压黑线探头的位置计算方向。
+ * 逻辑顺序从左到右为 DH1..DH4，左侧黑线产生正转向量。 */
+static float TurnFromWeightedState(uint8_t state)
+{
+    static const float weight[4] = { 3.0f, 1.0f, -1.0f, -3.0f };
+    float sum = 0.0f;
+    uint32_t black_count = 0U;
+
+    for (uint32_t i = 0U; i < 4U; i++) {
+        uint8_t mask = (uint8_t)(1U << (3U - i));
+        if ((state & mask) == 0U) {
+            sum += weight[i];
+            black_count++;
+        }
+    }
+
+    if (black_count == 0U || black_count == 4U) return 0.0f;
+    float position = sum / (float)black_count;
+    return TurnMinAngle * position;
+}
+
+static float TurnFromState(uint8_t state)
+{
+    switch (state) {
+        case STATE_CROSS:
+        case STATE_STRAIGHT:    return 0.0f;
+        case STATE_LEFT_90_A:
+        case STATE_LEFT_90_B:   return Turn90Angle;
+        case STATE_RIGHT_90_A:
+        case STATE_RIGHT_90_B:  return -Turn90Angle;
+        case STATE_LEFT_BIG:    return TurnMaxAngle;
+        case STATE_RIGHT_BIG:   return -TurnMaxAngle;
+        case STATE_LEFT_SMALL:  return TurnMinAngle;
+        case STATE_RIGHT_SMALL: return -TurnMinAngle;
+        default:                return TurnFromWeightedState(state);
+    }
+}
+
 void IRDM_line_inspection(void)
 {
-    static int last_state = 0;      // 记录上一次的状态
-	float left_motor_speed = 0;     // 左轮实时速度（m/s）
-    float right_motor_speed = 0;    // 右轮实时速度（m/s）
-	static int turn_cnt=0;
-	static int saved_state = 0;  // 保存转弯状态
-    // 读取红外传感器状态（4个红外对管数字值）
-	    // 读取各红外对管的状态，强制转换为0或1
-    ir_dh4_state = DL_GPIO_readPins(IR_DH4_PORT, IR_DH4_PIN_17_PIN) ? 1 : 0;
-    ir_dh3_state = DL_GPIO_readPins(IR_DH3_PORT, IR_DH3_PIN_16_PIN) ? 1 : 0;
-    ir_dh2_state = DL_GPIO_readPins(IR_DH2_PORT, IR_DH2_PIN_12_PIN) ? 1 : 0;
-    ir_dh1_state = DL_GPIO_readPins(IR_DH1_PORT, IR_DH1_PIN_27_PIN) ? 1 : 0;
+    static float last_search_turn = 0.0f;
+    static uint8_t turn_candidate = STATE_STRAIGHT;
+    static uint8_t saved_turn_state = STATE_STRAIGHT;
+    static uint32_t turn_confirm_count = 0U;
+    static uint32_t turn_count = 0U;
+    static uint32_t exit_straight_count = 0U;
+    static uint32_t lost_count = 0U;
+    static float ramp_left_mmps = 0.0f;
+    static float ramp_right_mmps = 0.0f;
 
-    int sensor_state = (ir_dh1_state << 3) | (ir_dh2_state << 2) | (ir_dh3_state << 1) | ir_dh4_state; // 将四位传感器状态合成一个整数
+    uint8_t sensor_state = FilterSensorState(ReadRawSensorState());
 
-    // 直角转弯延时处理：检测到直角后先直行200拍再转弯
-    if((sensor_state == STATE_LEFT_90_A || sensor_state == STATE_RIGHT_90_A||sensor_state == STATE_LEFT_90_B || sensor_state == STATE_RIGHT_90_B) && turn_cnt == 0)
-    {
-        saved_state = sensor_state;  // 记住转弯状态
-        turn_cnt = 1;
+    /* 直角弯必须持续若干周期，避免单次毛刺触发长时间锁定。 */
+    if (turn_count == 0U && Is90DegreeState(sensor_state)) {
+        if (sensor_state == turn_candidate) {
+            turn_confirm_count++;
+        } else {
+            turn_candidate = sensor_state;
+            turn_confirm_count = 1U;
+        }
+
+        uint32_t required = TurnConfirmCycles > 0U ? TurnConfirmCycles : 1U;
+        if (turn_confirm_count >= required) {
+            saved_turn_state = sensor_state;
+            turn_count = 1U;
+            turn_confirm_count = 0U;
+            exit_straight_count = 0U;
+        }
+    } else if (!Is90DegreeState(sensor_state)) {
+        turn_confirm_count = 0U;
     }
-    if(turn_cnt > 0)
-    {
-        if(turn_cnt < 175) sensor_state = STATE_STRAIGHT;  // 前200拍直行
-        else if(turn_cnt < 4000&&sensor_state!=STATE_LEFT_BIG&&sensor_state!=STATE_RIGHT_BIG) sensor_state = saved_state;
-        else { turn_cnt = 0; saved_state = 0; }
-        if(turn_cnt > 0) turn_cnt++;
+
+    if (turn_count > 0U) {
+        if (turn_count < TurnStraightCycles) {
+            sensor_state = STATE_STRAIGHT;
+        } else {
+            if (turn_count >= TurnStraightCycles + TurnMinHoldCycles &&
+                sensor_state == STATE_STRAIGHT) exit_straight_count++;
+            else exit_straight_count = 0U;
+
+            if (turn_count >= TurnHoldMaxCycles ||
+                exit_straight_count >= TurnExitStraightCycles) {
+                turn_count = 0U;
+                exit_straight_count = 0U;
+            } else {
+                sensor_state = saved_turn_state;
+                turn_count++;
+            }
+        }
+
+        if (turn_count > 0U && turn_count < TurnStraightCycles) turn_count++;
     }
-  /*=========================================================================*
-     * 状态判断，决定转弯方向和差速                                                *
-     *=========================================================================*/
-    switch (sensor_state)
-    {
-        case STATE_CROSS:// 十字路口（全白）
-			turn_diff = 0;
-            break;
-        case STATE_LEFT_90_A: // 左直角弯
-		case STATE_LEFT_90_B: // 左直角弯
-            turn_diff = Turn90Angle;
-            break;
-        case STATE_RIGHT_90_A: // 右直角弯
-		case STATE_RIGHT_90_B: // 右直角弯
-            turn_diff = -Turn90Angle;
-            break;
-        case STATE_LEFT_BIG://大左转
-            turn_diff = TurnMaxAngle;
-            break;
-        case STATE_RIGHT_BIG://大右转
-            turn_diff = -TurnMaxAngle;
-            break;
-        case STATE_LEFT_SMALL://小左转
-            turn_diff = TurnMinAngle;
-            break;
-        case STATE_RIGHT_SMALL://小右转
-            turn_diff = -TurnMinAngle;
-            break;
-        case STATE_STRAIGHT://直行
-            turn_diff = 0;
-            break;
-        case STATE_LOST://丢失（全黑）
-            if (last_state == STATE_LEFT_SMALL) turn_diff = TurnMidAngle;//丢失后左转
-			else if (last_state == STATE_RIGHT_SMALL) turn_diff = -TurnMidAngle;//丢失后右转
-			else if(last_state == STATE_LEFT_BIG ) turn_diff = TurnMaxAngle;//丢失后左转
-			else if(last_state == STATE_RIGHT_BIG ) turn_diff = -TurnMaxAngle;//丢失后右转
-            break;
-        default: // 未识别状态，直行
-            turn_diff = 0;
-            break;
+
+    bool lost_stop = false;
+    g_current_mode = sensor_state;
+    if (sensor_state == STATE_LOST) {
+        lost_count++;
+        if (lost_count <= LostSearchCycles) {
+            /* 用最近一次非零转向的方向找线；幅度限制为TurnMidAngle，
+             * 避免沿直角弯的大转向量继续向弯内扎。 */
+            turn_diff = last_search_turn;
+        } else {
+            turn_diff = 0.0f;
+            lost_stop = true;
+        }
+    } else {
+        lost_count = 0U;
+        turn_diff = TurnFromState(sensor_state);
+        if (turn_diff > 0.0f) last_search_turn = TurnMidAngle;
+        else if (turn_diff < 0.0f) last_search_turn = -TurnMidAngle;
     }
-	//更新上一次状态
-	if(sensor_state!=STATE_LOST)
-	{
-		last_state=sensor_state;
-	}
-    // 转弯角度越大，基础速度越小
-	if(fabs(turn_diff)<ForwardLimit)
-	{
-		base_speed_mm = BaseSpeed - (BaseSpeed * (fabs(turn_diff) / ForwardLimit));
-	}
-	else base_speed_mm=0;
-    /*========================================================================*
-     * 计算左右轮速度：（基础速度-转弯差速，基础速度+转弯差速）单位 mm/s          *
-     *=========================================================================*/
-	left_motor_speed = 0.001f * (base_speed_mm - turn_diff);
-    right_motor_speed = 0.001f * (base_speed_mm + turn_diff);
-    // 赋值给左右轮速度
-    MotorA.Target_Encoder = left_motor_speed;//左轮
-    MotorB.Target_Encoder = right_motor_speed;//右轮
+
+    if (lost_stop || ForwardLimit <= 0.0f) {
+        base_speed_mm = 0.0f;
+    } else if (Is90DegreeState(sensor_state)) {
+        /* 直角弯采用单轮转向：内侧轮=0，外侧轮=2*Turn90Angle。
+         * 左转：left=0/right>0；右转：right=0/left>0。 */
+        base_speed_mm = fabsf(turn_diff);
+    } else if (sensor_state == STATE_LEFT_BIG ||
+               sensor_state == STATE_RIGHT_BIG) {
+        /* 大弯使用独立的较高基础速度。 */
+        base_speed_mm = BigTurnBaseSpeed;
+    } else if (fabsf(turn_diff) < ForwardLimit) {
+        base_speed_mm = BaseSpeed * (1.0f - fabsf(turn_diff) / ForwardLimit);
+    } else {
+        base_speed_mm = 0.0f;
+    }
+
+    float target_left_mmps  = base_speed_mm - turn_diff;
+    float target_right_mmps = base_speed_mm + turn_diff;
+
+    if (Flag_Stop) {
+        ramp_left_mmps = 0.0f;
+        ramp_right_mmps = 0.0f;
+    } else {
+        ramp_left_mmps = SpeedRamp_Update(ramp_left_mmps, target_left_mmps);
+        ramp_right_mmps = SpeedRamp_Update(ramp_right_mmps, target_right_mmps);
+    }
+
+    MotorA.Target_Encoder = 0.001f * ramp_left_mmps;
+    MotorB.Target_Encoder = 0.001f * ramp_right_mmps;
 }

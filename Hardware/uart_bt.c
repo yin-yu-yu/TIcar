@@ -63,7 +63,10 @@ void BT_Printf(const char *fmt, ...)
     int len = vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
 
-    BT_SendBytes((const uint8_t *)buf, (len > 0) ? (uint16_t)len : 0);
+    if (len <= 0) return;
+    uint16_t send_len = (len < (int)sizeof(buf)) ? (uint16_t)len
+                                                 : (uint16_t)(sizeof(buf) - 1U);
+    BT_SendBytes((const uint8_t *)buf, send_len);
 }
 
 void BT_DMAConfig(void)

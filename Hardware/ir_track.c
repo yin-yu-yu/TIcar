@@ -25,10 +25,11 @@
 /* ========================================================================
  * 模块变量：传感器状态（供显示/外部访问）
  * ======================================================================== */
-uint32_t ir_dh1_state;
-uint32_t ir_dh2_state;
-uint32_t ir_dh3_state;
-uint32_t ir_dh4_state;
+/* 原始状态由当前生效的 IR_Module.c 统一持有，避免两套实现重复定义。 */
+extern uint32_t ir_dh1_state;
+extern uint32_t ir_dh2_state;
+extern uint32_t ir_dh3_state;
+extern uint32_t ir_dh4_state;
 
 /* ========================================================================
  * 循迹状态机变量
@@ -47,6 +48,8 @@ extern float TurnMidAngle;
 extern float TurnMinAngle;
 extern float BaseSpeed;      /* mm/s */
 extern float ForwardLimit;
+extern uint32_t TurnStraightCycles;
+extern uint32_t TurnHoldMaxCycles;
 
 /* ---- 输出：目标底盘命令（由 Application/motion_control 读取） ---- */
 static ChassisCmd_t g_linefollow_cmd;
@@ -62,8 +65,11 @@ static ChassisCmd_t g_linefollow_cmd;
  */
 uint8_t IR_GetSensorState(void)
 {
-    ir_dh1_state = DL_GPIO_readPins(IR_DH1_PORT, IR_DH1_PIN_27_PIN) ? 1 : 0;
-    ir_dh2_state = DL_GPIO_readPins(IR_DH2_PORT, IR_DH2_PIN_12_PIN) ? 1 : 0;
+    /* 实车接线中第 1、2 路与原工程标号相反，在读取层交换，
+     * 让后续状态表仍按 DH1、DH2、DH3、DH4 的逻辑顺序工作。
+     * 传感器为低电平检测黑线：黑线=0，白色反射=1。 */
+    ir_dh1_state = DL_GPIO_readPins(IR_DH2_PORT, IR_DH2_PIN_12_PIN) ? 1 : 0;
+    ir_dh2_state = DL_GPIO_readPins(IR_DH1_PORT, IR_DH1_PIN_27_PIN) ? 1 : 0;
     ir_dh3_state = DL_GPIO_readPins(IR_DH3_PORT, IR_DH3_PIN_16_PIN) ? 1 : 0;
     ir_dh4_state = DL_GPIO_readPins(IR_DH4_PORT, IR_DH4_PIN_17_PIN) ? 1 : 0;
 
@@ -161,9 +167,9 @@ void IR_LineDetect_Update(void)
 
     if (g_turn_cnt > 0)
     {
-        if (g_turn_cnt < 175) {
-            sensor_state = 0x09;  /* Force straight for ~200 cycles */
-        } else if (g_turn_cnt < 4000
+        if ((uint32_t)g_turn_cnt < TurnStraightCycles) {
+            sensor_state = 0x09;  /* 直角弯前先直行，可在 IR_Module.c 调节 */
+        } else if ((uint32_t)g_turn_cnt < TurnHoldMaxCycles
                 && sensor_state != 0x07 && sensor_state != 0x0E) {
             sensor_state = g_saved_state;
         } else {

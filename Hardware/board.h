@@ -135,7 +135,7 @@ extern float BaseSpeed;
 extern float Turn90Angle, TurnMaxAngle, TurnMidAngle, TurnMinAngle, ForwardLimit;
 
 /* ---- 编码器计数（来自编码器中断服务程序） ---- */
-extern int Get_Encoder_countA, Get_Encoder_countB;
+extern volatile int32_t Get_Encoder_countA, Get_Encoder_countB;
 
 /* ---- 蓝牙控制标志（来自 uart_callback.c） ---- */
 extern int Flag_Left, Flag_Right, Flag_Direction, Turn_Flag;

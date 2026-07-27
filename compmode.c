@@ -20,6 +20,10 @@
 #include "board.h"
 #include "show.h"
 #include "uart_callback.h"
+#include "IR_Module.h"
+
+/* 临时调试开关：1=蓝牙只发送循迹模式，0=恢复A/B/C状态帧。 */
+#define BT_ONLY_IR_MODE 1
 
 /* ---- Extern globals used in competition loop ---- */
 extern float Voltage;
@@ -74,7 +78,7 @@ void CompMode_Run(void)
             return;
         }
 
-        static uint8_t bt_toggle = 0;
+        static uint8_t last_ir_mode = 0xFFU;
 
         /* ---- Battery monitoring ---- */
         Voltage = Get_battery_volt();
@@ -83,8 +87,9 @@ void CompMode_Run(void)
         /* ---- Bluetooth protocol (new API — replaces legacy BTBufferHandler) ---- */
         BT_Protocol_Handler();
 
-        /* ---- Status reporting over Bluetooth (new API — replaces legacy APP_Show) ----
-         * Alternates between: A-packet (status), B-packet (attitude), C-packet (PID) */
+        /* ---- 原有A/B/C状态帧；循迹调试期间暂时屏蔽 ---- */
+#if !BT_ONLY_IR_MODE
+        static uint8_t bt_toggle = 0;
         if (PID_Send) {
             BT_Protocol_SendPID();
             PID_Send = 0;
@@ -97,10 +102,21 @@ void CompMode_Run(void)
             BT_Printf("{B%d:%d:%d}$", 0, 0, 0);
         }
         bt_toggle = !bt_toggle;
+#endif
 
-        /* ---- OLED display refresh ---- */
+        /* 循迹模式变化时发送一次，避免在400Hz控制中断里阻塞串口。
+         * 帧格式示例：{IR:9:STRAIGHT}$\r\n、{IR:F:LOST}$\r\n */
+        uint8_t ir_mode = IR_GetCurrentMode();
+        if (ir_mode != last_ir_mode) {
+            BT_Printf("{IR:%X:%s}$\r\n", ir_mode, IR_GetModeName(ir_mode));
+            last_ir_mode = ir_mode;
+        }
+
+        /* ---- OLED display refresh（oled_show内部已完成一次刷新） ---- */
         CompMode_OLED_Show();
-        OLED_Refresh_Gram();
+
+        /* 低速任务限频到20Hz，避免ADC/UART/OLED持续占满CPU。 */
+        delay_ms(50);
 
         /* ---- Low battery: LED flashing handled in state machine (TIMER ISR) ---- */
     }

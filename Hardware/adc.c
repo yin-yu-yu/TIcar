@@ -3,16 +3,22 @@ volatile bool gCheckADC;        //ADC采集成功标志位
 //读取ADC的数据
 float Get_battery_volt(void)
 {
-        float gAdcResult = 0;
+        static float last_voltage = 8.4f;
+        uint32_t timeout = 100000U;
+
+        gCheckADC = false;
         //软件触发ADC开始转换
         DL_ADC12_startConversion(ADC12_VOLTAGE_INST);
-        //如果当前状态为正在转换中则等待转换结束
-        //获取数据
-        gAdcResult = DL_ADC12_getMemResult(ADC12_VOLTAGE_INST, ADC12_VOLTAGE_ADCMEM_0)*3.3*11.0/4096;
-        //清除标志位
-        gCheckADC = false;
 
-        return gAdcResult;
+        /* 主循环中等待转换完成；中断仍保持开启，不阻塞400Hz控制中断。 */
+        while (!gCheckADC && timeout > 0U) timeout--;
+        if (gCheckADC) {
+                last_voltage = DL_ADC12_getMemResult(
+                        ADC12_VOLTAGE_INST, ADC12_VOLTAGE_ADCMEM_0)
+                        * 3.3f * 11.0f / 4096.0f;
+        }
+
+        return last_voltage;
 }
 
 //ADC中断服务函数
