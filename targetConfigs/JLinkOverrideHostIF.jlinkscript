@@ -1,9 +1,0 @@
-/*********************************************************************
- * Force CCS/J-Link DLL to use the network probe without showing the
- * probe/IP selection dialog.
- *********************************************************************/
-int InitEMU(void)
-{
-    JLINK_ExecCommand("SetHostIF IP = 192.168.31.56");
-    return 0;
-}

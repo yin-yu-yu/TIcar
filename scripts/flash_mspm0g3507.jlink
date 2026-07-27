@@ -1,0 +1,5 @@
+r
+loadfile Debug/empty_LP_MSPM0G3507_nortos_ticlang.out
+r
+g
+exit
