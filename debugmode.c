@@ -42,13 +42,13 @@ static void Test_Motor(void)
     Debug_Printf("--- Test 1: Motor Interface ---\r\n");
     Debug_Printf("Motor: Forward\r\n");
     Motor_SetPWM(8000, 8000);
-    delay_ms(500);
+    delay_ms(1500);
     Debug_Printf("Motor: Stop\r\n");
     Motor_Stop();
-    delay_ms(500);
+    delay_ms(1500);
     Debug_Printf("Motor: Backward\r\n");
     Motor_SetPWM(-8000, -8000);
-    delay_ms(500);
+    delay_ms(1500);
     Motor_Stop();
     Debug_Printf("Motor: OK\r\n");
 }
