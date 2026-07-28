@@ -17,21 +17,22 @@ float TurnMidAngle = 50.0f;
 float TurnMinAngle = 20.0f;
 
 float BaseSpeed    = 300.0f; /* mm/s */
-float BigTurnBaseSpeed = 220.0f; /* 大弯基础速度，左右轮约280/400mm/s */
-/* 转向降速尺度。600时，Turn90Angle=200约得到内轮0、外轮400mm/s。 */
+float BigTurnBaseSpeed = 220.0f; /* 大弯时轮速约为160/280mm/s */
+/* 普通弯道的降速尺度；数值越大，弯道保留的前进速度越多。 */
 float ForwardLimit = 600.0f;
 
-uint32_t TurnStraightCycles   = 80U;  /* 200ms */
-uint32_t TurnHoldMaxCycles    = 600U; /* 1.0s */
-uint32_t TurnConfirmCycles    = 4U;   /* 直角状态持续10ms才确认 */
-uint32_t TurnMinHoldCycles    = 0U;  /* 开始转弯后立刻开始 */
-uint32_t TurnExitStraightCycles = 4U; /* 居中持续10ms后退出锁定 */
+uint32_t TurnStraightCycles   = 0U;   /* 直角确认后立即转向，不再强制前冲 */
+uint32_t TurnHoldMaxCycles    = 400U; /* 最长保持直角转向1.0s */
+uint32_t TurnConfirmCycles    = 2U;   /* 滤波后再确认5ms，抑制误触发 */
+uint32_t TurnMinHoldCycles    = 12U;  /* 转向立即开始，但30ms内不允许误退出 */
+uint32_t TurnExitStraightCycles = 2U; /* 居中持续5ms后退出锁定 */
 
 uint32_t IRFilterSamples = 3U;       /* 同一原始状态连续3次才采用 */
 uint32_t LostSearchCycles = 640U;    /* 丢线后沿最近转向搜索1600ms */
 
 float WheelAccelLimit = 1000.0f;     /* mm/s^2 */
 float WheelDecelLimit = 1800.0f;     /* mm/s^2 */
+float WheelSteerResponseLimit = 12000.0f; /* 转向建立/消除速度，mm/s^2 */
 
 typedef enum {
     STATE_CROSS         = 0x00, /* 四路都在黑线上 */
@@ -80,11 +81,12 @@ static bool Is90DegreeState(uint8_t state)
            state == STATE_RIGHT_90_A || state == STATE_RIGHT_90_B;
 }
 
-static float SpeedRamp_Update(float current, float target)
+static float SpeedRamp_Update(float current, float target,
+                              float accel_rate, float decel_rate)
 {
-    float rate = WheelAccelLimit;
+    float rate = accel_rate;
     if (fabsf(target) < fabsf(current) || current * target < 0.0f) {
-        rate = WheelDecelLimit;
+        rate = decel_rate;
     }
 
     float max_step = rate / (float)CONTROL_FREQUENCY;
@@ -260,8 +262,23 @@ void IRDM_line_inspection(void)
         ramp_left_mmps = 0.0f;
         ramp_right_mmps = 0.0f;
     } else {
-        ramp_left_mmps = SpeedRamp_Update(ramp_left_mmps, target_left_mmps);
-        ramp_right_mmps = SpeedRamp_Update(ramp_right_mmps, target_right_mmps);
+        /*
+         * 直线启停继续使用柔和斜坡；转向量发生变化时提高左右轮响应。
+         * 否则直角弯退出后，内侧轮从0恢复到直线速度约需0.3s，
+         * 这段残余差速会让车头继续转动并产生明显过冲。
+         */
+        float current_turn = 0.5f * (ramp_right_mmps - ramp_left_mmps);
+        bool steering_transition =
+            fabsf(turn_diff - current_turn) > 0.5f;
+        float accel_rate = steering_transition ? WheelSteerResponseLimit
+                                               : WheelAccelLimit;
+        float decel_rate = steering_transition ? WheelSteerResponseLimit
+                                               : WheelDecelLimit;
+
+        ramp_left_mmps = SpeedRamp_Update(ramp_left_mmps, target_left_mmps,
+                                          accel_rate, decel_rate);
+        ramp_right_mmps = SpeedRamp_Update(ramp_right_mmps, target_right_mmps,
+                                           accel_rate, decel_rate);
     }
 
     MotorA.Target_Encoder = 0.001f * ramp_left_mmps;

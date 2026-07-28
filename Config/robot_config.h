@@ -32,11 +32,11 @@ typedef enum {
 /* ========================================================================
  * 2. 车轮与机械参数
  * ======================================================================== */
-#define WHEEL_DIAMETER_MM       65.0f       /* 车轮直径（mm）                    */
-#define WHEEL_PERIMETER_M       0.2042f     /* 车轮周长（m）                     */
-#define WHEEL_SPACING_M         0.1610f     /* 两轮间距（m）                     */
+#define WHEEL_DIAMETER_MM       66.5f       /* 车轮直径（mm）                    */
+#define WHEEL_PERIMETER_M       0.20891591f /* 车轮周长（m）                     */
+#define WHEEL_SPACING_M         0.2100f     /* 两轮中心间距（m）                 */
 #define MOTOR_GEAR_RATIO        28.0f       /* 电机减速箱减速比                  */
-#define ENCODER_PPR             13.0f       /* 编码器每转脉冲数                  */
+#define ENCODER_PPR             13.0f       /* 暂按原工程编码器每转脉冲数        */
 #define ENCODER_MULTIPLES       2           /* 编码器正交倍频系数                */
 
 /* ========================================================================
